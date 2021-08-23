@@ -1,0 +1,4 @@
+SN76496 To do
+--------------
+
+Do some reverse engineering to see how the frequency counter works.
