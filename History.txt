@@ -2,17 +2,13 @@ SN76496 revision history
 -=-=-=-=-=-=-=-=-=-=-=-=-
 
 
-V1.6.0 - 2021-03-05 (FluBBa)
-	Added load/save state.
+V1.5.1 - 2021-01-18 (FluBBa)
+	Some small optimisations after mixer/LUT rewrite.
 
-V1.5.0 - 2020-08-09 (FluBBa)
+V1.5.0 - 2020-07-14 (FluBBa)
 	Rewrote mixer to use attenuation LUT from bits.
 
-V1.4.1 - 2020-06-05 (FluBBa)
-	Fixed up headers and more.
-
-V1.4.0 - 2018-07-13 (FluBBa)
-	16Bit mono version.
+V1.3.1 - 2018-07-12 (FluBBa)
 	Optimised register writes.
 
 V1.3.0 - 2018-06-19 (FluBBa)

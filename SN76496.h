@@ -25,9 +25,8 @@ typedef struct {
 
 	u8 snAttChg;
 	u8 snLastReg;
-	u8 snPadding[2];
-
-	s16 calculatedVolumes[16];
+	u8 ggStereo;
+	u8 snPadding[1];
 
 	u16 ch0Reg;
 	u16 ch0Att;
@@ -37,6 +36,9 @@ typedef struct {
 	u16 ch2Att;
 	u16 ch3Reg;
 	u16 ch3Att;
+
+	u32 snPadding2[4];
+	s16 calculatedVolumes[16*2];
 } SN76496;
 
 
@@ -64,7 +66,7 @@ int sn76496LoadState(SN76496 *chip, const void *source);
  */
 int sn76496GetStateSize(void);
 
-void sn76496Mixer(int len, s16 *dest, SN76496 *chip);
+void sn76496Mixer(int len, void *dest, SN76496 *chip);
 void sn76496W(u8 val, SN76496 *chip);
 
 

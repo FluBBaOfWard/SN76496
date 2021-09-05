@@ -1,4 +1,4 @@
-;@ SN76496 sound chip emulator.
+;@ SN76496 sound chip emulator for SMS.
 #ifdef __arm__
 
 #include "SN76496.i"
@@ -9,6 +9,7 @@
 	.global sn76496GetStateSize
 	.global sn76496Mixer
 	.global sn76496W
+	.global sn76496GGW
 								;@ These values are for the SMS/GG/MD vdp/sound chip.
 .equ PFEED_SMS,	0x8000			;@ Periodic Noise Feedback
 .equ WFEED_SMS,	0x9000			;@ White Noise Feedback
@@ -36,7 +37,7 @@
 ;@ r0  = Mix length.
 ;@ r1  = Mixerbuffer.
 ;@ r2 -> r5 = pos+freq.
-;@ r6  = currentBits + offset to calculated volumes.
+;@ r6  = CurrentBits.
 ;@ r7  = Noise generator.
 ;@ r8  = Noise feedback.
 ;@ lr  = Mixer reg.
@@ -44,43 +45,51 @@
 ;@----------------------------------------------------------------------------
 sn76496Mixer:				;@ r0=len, r1=dest, r12=snptr
 ;@----------------------------------------------------------------------------
-	stmfd sp!,{r4-r8,lr}
+	stmfd sp!,{r4-r9,lr}
 	ldmia snptr,{r2-r8,lr}		;@ Load freq/addr0-3, currentBits, rng, noisefb, attChg
 	tst lr,#0xff
 	blne calculateVolumes
 ;@----------------------------------------------------------------------------
 mixLoop:
+	mov lr,#0x80000000
+innerMixLoop:
 	adds r2,r2,#0x00400000
 	subcs r2,r2,r2,lsl#16
-	eorcs r6,r6,#0x02
+	eorcs r6,r6,#0x04
 
 	adds r3,r3,#0x00400000
 	subcs r3,r3,r3,lsl#16
-	eorcs r6,r6,#0x04
+	eorcs r6,r6,#0x08
 
 	adds r4,r4,#0x00400000
 	subcs r4,r4,r4,lsl#16
-	eorcs r6,r6,#0x08
+	eorcs r6,r6,#0x10
 
 	adds r5,r5,#0x00400000		;@ 0x00200000?
 	subcs r5,r5,r5,lsl#16
-	biccs r6,r6,#0x10
+	biccs r6,r6,#0x20
 	movscs r7,r7,lsr#1
 	eorcs r7,r7,r8
-	orrcs r6,r6,#0x10
+	orrcs r6,r6,#0x20
 
-	ldrh lr,[snptr,r6]
-	subs r0,r0,#1
-	strhpl lr,[r1],#2
+	ldr r9,[snptr,r6]
+	add lr,lr,r9
+	sub r0,r0,#1
+	tst r0,#3
+	bne innerMixLoop
+	eor lr,lr,#0x00008000
+	cmp r0,#0
+	strpl lr,[r1],#4
 	bhi mixLoop
 
 	stmia snptr,{r2-r7}			;@ Writeback freq,addr,currentBits,rng
-	ldmfd sp!,{r4-r8,lr}
+	ldmfd sp!,{r4-r9,lr}
 	bx lr
 ;@----------------------------------------------------------------------------
 
 	.section .text
 	.align 2
+
 ;@----------------------------------------------------------------------------
 sn76496Reset:				;@ r0 = chiptype SMS/SN76496, snptr=r12=pointer to struct
 ;@----------------------------------------------------------------------------
@@ -101,10 +110,11 @@ rLoop:
 	strpl r0,[snptr,r2,lsl#2]
 	bhi rLoop
 	strh r1,[snptr,#noiseFB]
-	mov r0,#calculatedVolumes
-	str r0,[snptr,#currentBits]
-	mov r1,#0x8000
-	strh r1,[snptr,r0]
+	mov r1,#calculatedVolumes
+	str r1,[snptr,#currentBits]
+	str r0,[snptr,r1]
+	mov r0,#0xFF
+	strb r0,[snptr,#ggStereo]
 
 	bx lr
 
@@ -135,7 +145,6 @@ sn76496GetStateSize:	;@ Out r0=state size.
 ;@----------------------------------------------------------------------------
 	mov r0,#snSize
 	bx lr
-
 ;@----------------------------------------------------------------------------
 SMSFeedback:
 	.long PFEED_SMS
@@ -161,8 +170,8 @@ sn76496W:					;@ r0 = value, snptr = r12 = struct-pointer
 	add r1,snptr,r2,lsl#2
 	bcc setFreq
 doVolume:
-	ldrb r2,[r1,#ch0Att]
 	and r0,r0,#0x0F
+	ldrb r2,[r1,#ch0Att]
 	eors r2,r2,r0
 	strbne r0,[r1,#ch0Att]
 	strbne r2,[snptr,#snAttChg]
@@ -177,8 +186,9 @@ setFreq:
 	strbeq r0,[r1,#ch0Reg+1]
 	strbne r0,[r1,#ch0Reg]
 	ldrh r0,[r1,#ch0Reg]
-	movs r0,r0,lsl#2			;@ 0x000 is 0x400 on SN76496, 0x001 on SMS VDP.
-//	moveq r0,#0x0040			;@ This is for SMS
+	movs r0,r0,lsl#2
+	cmp r0,#0x0180				;@ We set any value under 6 to 1 to fix aliasing.
+	movmi r0,#0x0040			;@ Value zero is same as 1 on SMS.
 	strh r0,[r1,#ch0Frq]
 
 	cmp r2,#2					;@ Ch2
@@ -196,51 +206,80 @@ noiseFeedback:
 	strh r0,[snptr,#rng]
 	movne r0,#WFEED_SMS			;@ White noise
 	strh r0,[snptr,#noiseFB]
+	mov r2,#0x0400				;@ These values sound ok
+	mov r2,r2,lsl r1
 	cmp r1,#3
-	ldrheq r0,[snptr,#ch2Frq]
-	movne r0,#0x0400			;@ These values sound ok
-	movne r0,r0,lsl r1
-	strh r0,[snptr,#ch3Frq]
+	ldrheq r2,[snptr,#ch2Frq]
+	strh r2,[snptr,#ch3Frq]
+	bx lr
+
+;@----------------------------------------------------------------------------
+sn76496GGW:
+;@----------------------------------------------------------------------------
+	ldrb r1,[snptr,#ggStereo]
+	eors r1,r1,r0
+	strbne r0,[snptr,#ggStereo]
+	strbne r1,[snptr,#snAttChg]
 	bx lr
 
 ;@----------------------------------------------------------------------------
 calculateVolumes:
 ;@----------------------------------------------------------------------------
-	stmfd sp!,{r0-r6,lr}
+	stmfd sp!,{r0-r6}
 
 	ldrb r3,[snptr,#ch0Att]
 	ldrb r4,[snptr,#ch1Att]
 	ldrb r5,[snptr,#ch2Att]
 	ldrb r6,[snptr,#ch3Att]
-	adr r1,attenuation
+	adr r1,attenuation1_4
 	ldr r3,[r1,r3,lsl#2]
 	ldr r4,[r1,r4,lsl#2]
 	ldr r5,[r1,r5,lsl#2]
 	ldr r6,[r1,r6,lsl#2]
 
-	mov lr,#0x8000
+	ldrb r0,[snptr,#ggStereo]
+	mov r1,#-1
+	tst r0,#0x01
+	biceq r3,r3,r1,lsl#16
+	tst r0,#0x02
+	biceq r4,r4,r1,lsl#16
+	tst r0,#0x04
+	biceq r5,r5,r1,lsl#16
+	tst r0,#0x08
+	biceq r6,r6,r1,lsl#16
+	tst r0,#0x10
+	biceq r3,r3,r1,lsr#16
+	tst r0,#0x20
+	biceq r4,r4,r1,lsr#16
+	tst r0,#0x40
+	biceq r5,r5,r1,lsr#16
+	tst r0,#0x80
+	biceq r6,r6,r1,lsr#16
+
 	add r2,snptr,#calculatedVolumes
-	mov r1,#0x1E
+	mov r1,#15
 volLoop:
-	ands r0,r1,#0x02
+	ands r0,r1,#0x01
 	movne r0,r3
-	tst r1,#0x04
+	tst r1,#0x02
 	addne r0,r0,r4
-	tst r1,#0x08
+	tst r1,#0x04
 	addne r0,r0,r5
-	tst r1,#0x10
+	tst r1,#0x08
 	addne r0,r0,r6
-	eor r0,lr,r0,lsr#2
-	strh r0,[r2,r1]
-	subs r1,r1,#2
+	str r0,[r2,r1,lsl#2]
+	subs r1,r1,#1
 	bne volLoop
 	strb r1,[snptr,#snAttChg]
-	ldmfd sp!,{r0-r6,pc}
-
+	ldmfd sp!,{r0-r6}
+	bx lr
 ;@----------------------------------------------------------------------------
 attenuation:						;@ each step * 0.79370053 (-2dB?)
-	.long 0xFFFF,0xCB30,0xA145,0x8000,0x6598,0x50A3,0x4000,0x32CC
-	.long 0x2851,0x2000,0x1966,0x1428,0x1000,0x0CB3,0x0A14,0x0000
+	.long 0x3FFF3FFF,0x32CB32CB,0x28512851,0x20002000,0x19661966,0x14281428,0x10001000,0x0CB30CB3
+	.long 0x0A140A14,0x08000800,0x06590659,0x050A050A,0x04000400,0x032C032C,0x02850285,0x00000000
+attenuation1_4:						;@ each step * 0.79370053 (-2dB?)
+	.long 0x0FFF0FFF,0x0CB30CB3,0x0A140A14,0x08000800,0x06590659,0x050A050A,0x04000400,0x032C032C
+	.long 0x02850285,0x02000200,0x01960196,0x01430143,0x01000100,0x00CB00CB,0x00A100A1,0x00000000
 ;@----------------------------------------------------------------------------
 	.end
 #endif // #ifdef __arm__
