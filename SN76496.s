@@ -34,46 +34,47 @@
 #endif
 	.align 2
 ;@----------------------------------------------------------------------------
-;@ r0  = Mix length.
-;@ r1  = Mixerbuffer.
-;@ r2 -> r5 = pos+freq.
-;@ r6  = CurrentBits.
-;@ r7  = Noise generator.
-;@ r8  = Noise feedback.
-;@ lr  = Mixer reg.
-;@ r12 = snptr.
+;@ r0 = Mix length.
+;@ r1 = Mixerbuffer.
+;@ r2 = snptr.
+;@ r3 -> r6 = pos+freq.
+;@ r7 = CurrentBits.
+;@ r8 = Noise generator.
+;@ r9 = Noise feedback.
+;@ lr = Mixer reg.
 ;@----------------------------------------------------------------------------
-sn76496Mixer:				;@ r0=len, r1=dest, r12=snptr
+sn76496Mixer:				;@ r0=len, r1=dest, r2=snptr
+	.type   sn76496Mixer STT_FUNC
 ;@----------------------------------------------------------------------------
 	stmfd sp!,{r4-r9,lr}
-	ldmia snptr,{r2-r8,lr}		;@ Load freq/addr0-3, currentBits, rng, noisefb, attChg
+	ldmia r2,{r3-r9,lr}		;@ Load freq/addr0-3, currentBits, rng, noisefb, attChg
 	tst lr,#0xff
 	blne calculateVolumes
 ;@----------------------------------------------------------------------------
 mixLoop:
 	mov lr,#0x80000000
 innerMixLoop:
-	adds r2,r2,#0x00400000
-	subcs r2,r2,r2,lsl#16
-	eorcs r6,r6,#0x04
-
 	adds r3,r3,#0x00400000
 	subcs r3,r3,r3,lsl#16
-	eorcs r6,r6,#0x08
+	eorcs r7,r7,#0x04
 
 	adds r4,r4,#0x00400000
 	subcs r4,r4,r4,lsl#16
-	eorcs r6,r6,#0x10
+	eorcs r7,r7,#0x08
 
-	adds r5,r5,#0x00400000		;@ 0x00200000?
+	adds r5,r5,#0x00400000
 	subcs r5,r5,r5,lsl#16
-	biccs r6,r6,#0x20
-	movscs r7,r7,lsr#1
-	eorcs r7,r7,r8
-	orrcs r6,r6,#0x20
+	eorcs r7,r7,#0x10
 
-	ldr r9,[snptr,r6]
-	add lr,lr,r9
+	adds r6,r6,#0x00400000		;@ 0x00200000?
+	subcs r6,r6,r6,lsl#16
+	biccs r7,r7,#0x20
+	movscs r8,r8,lsr#1
+	eorcs r8,r8,r9
+	orrcs r7,r7,#0x20
+
+	ldr r12,[r2,r7]
+	add lr,lr,r12
 	sub r0,r0,#1
 	tst r0,#3
 	bne innerMixLoop
@@ -82,7 +83,7 @@ innerMixLoop:
 	strpl lr,[r1],#4
 	bhi mixLoop
 
-	stmia snptr,{r2-r7}			;@ Writeback freq,addr,currentBits,rng
+	stmia r2,{r3-r8}			;@ Writeback freq,addr,currentBits,rng
 	ldmfd sp!,{r4-r9,lr}
 	bx lr
 ;@----------------------------------------------------------------------------
@@ -91,30 +92,28 @@ innerMixLoop:
 	.align 2
 
 ;@----------------------------------------------------------------------------
-sn76496Reset:				;@ r0 = chiptype SMS/SN76496, snptr=r12=pointer to struct
+sn76496Reset:				;@ r0 = chiptype SMS/SN76496, snptr=r1=pointer to struct
+	.type   sn76496Reset STT_FUNC
 ;@----------------------------------------------------------------------------
 
 	cmp r0,#1
-	adr r0,SMSFeedback
-	addeq r0,r0,#12
-	addhi r0,r0,#24
-	ldmia r0,{r1-r3}
-	adr r0,noiseFeedback
-	str r2,[r0],#8
-	str r3,[r0]
+	ldr r3,=(WFEED_SMS<<16)+PFEED_SMS
+	ldreq r3,=(WFEED_SN<<16)+PFEED_SN
+	ldrhi r3,=(WFEED_NCR<<16)+PFEED_NCR
 
 	mov r0,#0
 	mov r2,#snSize/4			;@ 60/4=15
 rLoop:
 	subs r2,r2,#1
-	strpl r0,[snptr,r2,lsl#2]
+	strpl r0,[r1,r2,lsl#2]
 	bhi rLoop
-	strh r1,[snptr,#noiseFB]
-	mov r1,#calculatedVolumes
-	str r1,[snptr,#currentBits]
-	str r0,[snptr,r1]
+	strh r3,[r1,#noiseFB]
+	str r3,[r1,noiseType]
+	mov r2,#calculatedVolumes
+	str r2,[r1,#currentBits]	;@ Add offset to calculatedVolumes
+	str r0,[r1,r2]
 	mov r0,#0xFF
-	strb r0,[snptr,#ggStereo]
+	strb r0,[r1,#ggStereo]
 
 	bx lr
 
@@ -145,99 +144,87 @@ sn76496GetStateSize:	;@ Out r0=state size.
 ;@----------------------------------------------------------------------------
 	mov r0,#snSize
 	bx lr
-;@----------------------------------------------------------------------------
-SMSFeedback:
-	.long PFEED_SMS
-	mov r0,#PFEED_SMS			;@ Periodic noise
-	movne r0,#WFEED_SMS			;@ White noise
-SNFeedback:
-	.long PFEED_SN
-	mov r0,#PFEED_SN			;@ Periodic noise
-	movne r0,#WFEED_SN			;@ White noise
-NCRFeedback:
-	.long PFEED_NCR
-	mov r0,#PFEED_NCR			;@ Periodic noise
-	movne r0,#WFEED_NCR			;@ White noise
 
 ;@----------------------------------------------------------------------------
-sn76496W:					;@ r0 = value, snptr = r12 = struct-pointer
+sn76496W:					;@ r0 = value, r1 = struct-pointer
+	.type   sn76496W STT_FUNC
 ;@----------------------------------------------------------------------------
 	tst r0,#0x80
-	andne r2,r0,#0x70
-	strbne r2,[snptr,#snLastReg]
-	ldrbeq r2,[snptr,#snLastReg]
-	movs r2,r2,lsr#5
-	add r1,snptr,r2,lsl#2
+	andne r12,r0,#0x70
+	strbne r12,[r1,#snLastReg]
+	ldrbeq r12,[r1,#snLastReg]
+	movs r12,r12,lsr#5
+	add r2,r1,r12,lsl#2
 	bcc setFreq
 doVolume:
 	and r0,r0,#0x0F
-	ldrb r2,[r1,#ch0Att]
-	eors r2,r2,r0
-	strbne r0,[r1,#ch0Att]
-	strbne r2,[snptr,#snAttChg]
+	ldrb r12,[r2,#ch0Att]
+	eors r12,r12,r0
+	strbne r0,[r2,#ch0Att]
+	strbne r12,[r1,#snAttChg]
 	bx lr
 
 setFreq:
-	cmp r2,#3					;@ Noise channel
+	cmp r12,#3					;@ Noise channel
 	beq setNoiseFreq
 	tst r0,#0x80
 	andeq r0,r0,#0x3F
 	movne r0,r0,lsl#4
-	strbeq r0,[r1,#ch0Reg+1]
-	strbne r0,[r1,#ch0Reg]
-	ldrh r0,[r1,#ch0Reg]
+	strbeq r0,[r2,#ch0Reg+1]
+	strbne r0,[r2,#ch0Reg]
+	ldrh r0,[r2,#ch0Reg]
 	movs r0,r0,lsl#2
 	cmp r0,#0x0180				;@ We set any value under 6 to 1 to fix aliasing.
 	movmi r0,#0x0040			;@ Value zero is same as 1 on SMS.
-	strh r0,[r1,#ch0Frq]
+	strh r0,[r2,#ch0Frq]
 
-	cmp r2,#2					;@ Ch2
-	ldrbeq r1,[snptr,#ch3Reg]
-	cmpeq r1,#3
-	strheq r0,[snptr,#ch3Frq]
+	cmp r12,#2					;@ Ch2
+	ldrbeq r2,[r1,#ch3Reg]
+	cmpeq r2,#3
+	strheq r0,[r1,#ch3Frq]
 	bx lr
 
 setNoiseFreq:
-	and r1,r0,#3
-	strb r1,[snptr,#ch3Reg]
+	and r2,r0,#3
+	strb r2,[r1,#ch3Reg]
 	tst r0,#4
-noiseFeedback:
-	mov r0,#PFEED_SMS			;@ Periodic noise
-	strh r0,[snptr,#rng]
-	movne r0,#WFEED_SMS			;@ White noise
-	strh r0,[snptr,#noiseFB]
-	mov r2,#0x0400				;@ These values sound ok
-	mov r2,r2,lsl r1
-	cmp r1,#3
-	ldrheq r2,[snptr,#ch2Frq]
-	strh r2,[snptr,#ch3Frq]
+	ldr r0,[r1,noiseType]
+	strh r0,[r1,#rng]
+	movne r0,r0,lsr#16			;@ White noise
+	strh r0,[r1,#noiseFB]
+	mov r12,#0x0400				;@ These values sound ok
+	mov r12,r12,lsl r2
+	cmp r2,#3
+	ldrheq r12,[r1,#ch2Frq]
+	strh r12,[r1,#ch3Frq]
 	bx lr
 
 ;@----------------------------------------------------------------------------
-sn76496GGW:
+sn76496GGW:					;@ r0 = struct-pointer, r1 = value
+	.type   sn76496GGW STT_FUNC
 ;@----------------------------------------------------------------------------
-	ldrb r1,[snptr,#ggStereo]
-	eors r1,r1,r0
-	strbne r0,[snptr,#ggStereo]
-	strbne r1,[snptr,#snAttChg]
+	ldrb r2,[r1,#ggStereo]
+	eors r2,r2,r0
+	strbne r0,[r1,#ggStereo]
+	strbne r2,[r1,#snAttChg]
 	bx lr
 
 ;@----------------------------------------------------------------------------
-calculateVolumes:
+calculateVolumes:		;@ r2 = snptr
 ;@----------------------------------------------------------------------------
-	stmfd sp!,{r0-r6}
+	stmfd sp!,{r0,r1,r3-r6}
 
-	ldrb r3,[snptr,#ch0Att]
-	ldrb r4,[snptr,#ch1Att]
-	ldrb r5,[snptr,#ch2Att]
-	ldrb r6,[snptr,#ch3Att]
+	ldrb r3,[r2,#ch0Att]
+	ldrb r4,[r2,#ch1Att]
+	ldrb r5,[r2,#ch2Att]
+	ldrb r6,[r2,#ch3Att]
 	adr r1,attenuation1_4
 	ldr r3,[r1,r3,lsl#2]
 	ldr r4,[r1,r4,lsl#2]
 	ldr r5,[r1,r5,lsl#2]
 	ldr r6,[r1,r6,lsl#2]
 
-	ldrb r0,[snptr,#ggStereo]
+	ldrb r0,[r2,#ggStereo]
 	mov r1,#-1
 	tst r0,#0x01
 	biceq r3,r3,r1,lsl#16
@@ -256,7 +243,7 @@ calculateVolumes:
 	tst r0,#0x80
 	biceq r6,r6,r1,lsr#16
 
-	add r2,snptr,#calculatedVolumes
+	add r12,r2,#calculatedVolumes
 	mov r1,#15
 volLoop:
 	ands r0,r1,#0x01
@@ -267,11 +254,12 @@ volLoop:
 	addne r0,r0,r5
 	tst r1,#0x08
 	addne r0,r0,r6
-	str r0,[r2,r1,lsl#2]
+	str r0,[r12,r1,lsl#2]
 	subs r1,r1,#1
 	bne volLoop
-	strb r1,[snptr,#snAttChg]
-	ldmfd sp!,{r0-r6}
+
+	strb r1,[r2,#snAttChg]
+	ldmfd sp!,{r0,r1,r3-r6}
 	bx lr
 ;@----------------------------------------------------------------------------
 attenuation:						;@ each step * 0.79370053 (-2dB?)

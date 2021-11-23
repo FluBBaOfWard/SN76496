@@ -35,6 +35,7 @@
 
 	snPadding2:		.space 4*4
 	calculatedVolumes:	.space 16*2*2
+	noiseType:		.long 0
 
 	snSize:
 
