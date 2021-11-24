@@ -1,4 +1,4 @@
 SN76496 To do
 --------------
 
-
+	Use r3 instead of r12 in code for better ARM ABI compliance?

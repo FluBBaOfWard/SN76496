@@ -33,9 +33,9 @@
 	ch3Reg:			.short 0
 	ch3Att:			.short 0
 
-	snPadding2:		.space 4*4
-	calculatedVolumes:	.space 16*2*2
 	noiseType:		.long 0
+	snPadding2:		.space 3*4
+	calculatedVolumes:	.space 16*2*2
 
 	snSize:
 

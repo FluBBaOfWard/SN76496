@@ -43,7 +43,7 @@
 ;@ r9 = Noise feedback.
 ;@ lr = Mixer reg.
 ;@----------------------------------------------------------------------------
-sn76496Mixer:				;@ r0=len, r1=dest, r2=snptr
+sn76496Mixer:				;@ In r0=len, r1=dest, r2=snptr
 	.type   sn76496Mixer STT_FUNC
 ;@----------------------------------------------------------------------------
 	stmfd sp!,{r4-r9,lr}
@@ -92,7 +92,7 @@ innerMixLoop:
 	.align 2
 
 ;@----------------------------------------------------------------------------
-sn76496Reset:				;@ r0 = chiptype SMS/SN76496, snptr=r1=pointer to struct
+sn76496Reset:				;@ In r0 = chiptype SMS/SN76496, snptr=r1=pointer to struct
 	.type   sn76496Reset STT_FUNC
 ;@----------------------------------------------------------------------------
 
@@ -118,7 +118,7 @@ rLoop:
 	bx lr
 
 ;@----------------------------------------------------------------------------
-sn76496SaveState:		;@ In r0=destination, r1=snptr. Out r0=state size.
+sn76496SaveState:			;@ In r0=destination, r1=snptr. Out r0=state size.
 	.type   sn76496SaveState STT_FUNC
 ;@----------------------------------------------------------------------------
 	mov r2,#snSize
@@ -129,7 +129,7 @@ sn76496SaveState:		;@ In r0=destination, r1=snptr. Out r0=state size.
 	ldmfd sp!,{r0,lr}
 	bx lr
 ;@----------------------------------------------------------------------------
-sn76496LoadState:		;@ In r0=snptr, r1=source. Out r0=state size.
+sn76496LoadState:			;@ In r0=snptr, r1=source. Out r0=state size.
 	.type   sn76496LoadState STT_FUNC
 ;@----------------------------------------------------------------------------
 	stmfd sp!,{lr}
@@ -139,7 +139,7 @@ sn76496LoadState:		;@ In r0=snptr, r1=source. Out r0=state size.
 
 	ldmfd sp!,{lr}
 ;@----------------------------------------------------------------------------
-sn76496GetStateSize:	;@ Out r0=state size.
+sn76496GetStateSize:		;@ Out r0=state size.
 	.type   sn76496GetStateSize STT_FUNC
 ;@----------------------------------------------------------------------------
 	mov r0,#snSize
@@ -200,7 +200,7 @@ setNoiseFreq:
 	bx lr
 
 ;@----------------------------------------------------------------------------
-sn76496GGW:					;@ r0 = struct-pointer, r1 = value
+sn76496GGW:					;@ In r0 = value, r1 = struct-pointer
 	.type   sn76496GGW STT_FUNC
 ;@----------------------------------------------------------------------------
 	ldrb r2,[r1,#ggStereo]
@@ -210,7 +210,7 @@ sn76496GGW:					;@ r0 = struct-pointer, r1 = value
 	bx lr
 
 ;@----------------------------------------------------------------------------
-calculateVolumes:		;@ r2 = snptr
+calculateVolumes:			;@ r2 = snptr
 ;@----------------------------------------------------------------------------
 	stmfd sp!,{r0,r1,r3-r6}
 

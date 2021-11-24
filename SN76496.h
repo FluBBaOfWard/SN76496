@@ -37,12 +37,16 @@ typedef struct {
 	u16 ch3Reg;
 	u16 ch3Att;
 
-	u32 snPadding2[4];
-	s16 calculatedVolumes[16*2];
 	u32 noiseType;
+	u32 snPadding2[3];
+	s16 calculatedVolumes[16*2];
 } SN76496;
 
-
+/**
+ * Reset/initialize SN76496 chip.
+ * @param  chipType: selects version of chip, 0=SMS/GG VDP version, 1=SN76496, 2=NCR 8496.
+ * @param  *chip: The SN76496 chip.
+ */
 void sn76496Reset(int chiptype, SN76496 *chip);
 
 /**
@@ -67,6 +71,13 @@ int sn76496LoadState(SN76496 *chip, const void *source);
  */
 int sn76496GetStateSize(void);
 
+/**
+ * Runs the sound chip for len number of cycles, output is 1/4 samples,
+ * so if actual chip would output 218kHz this mixer would render at ~55kHz.
+ * @param  *len: Number of cycles to run.
+ * @param  *dest: Pointer to buffer where sound is rendered.
+ * @param  *chip: The SN76496 chip.
+ */
 void sn76496Mixer(int len, void *dest, SN76496 *chip);
 
 /**
