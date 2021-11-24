@@ -37,9 +37,15 @@ typedef struct {
 	u16 ch2Att;
 	u16 ch3Reg;
 	u16 ch3Att;
+	u32 noiseType;
 } SN76496;
 
 
+/**
+ * Reset/initialize SN76496 chip.
+ * @param  chipType: selects version of chip, 0=SMS/GG VDP version, 1=SN76496, 2=NCR 8496.
+ * @param  *chip: The SN76496 chip.
+ */
 void sn76496Reset(int chiptype, SN76496 *chip);
 
 /**
@@ -64,7 +70,19 @@ int sn76496LoadState(SN76496 *chip, const void *source);
  */
 int sn76496GetStateSize(void);
 
+/**
+ * Runs the sound chip for len number of cycles, renders same amount of samples.
+ * @param  *len: Number of cycles to run.
+ * @param  *dest: Pointer to buffer where sound is rendered.
+ * @param  *chip: The SN76496 chip.
+ */
 void sn76496Mixer(int len, s16 *dest, SN76496 *chip);
+
+/**
+ * Write value to SN76496 chip
+ * @param  value: value to write.
+ * @param  *chip: The SN76496 chip.
+ */
 void sn76496W(u8 val, SN76496 *chip);
 
 

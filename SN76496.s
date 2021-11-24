@@ -86,13 +86,9 @@ sn76496Reset:				;@ r0 = chiptype SMS/SN76496, snptr=r12=pointer to struct
 ;@----------------------------------------------------------------------------
 
 	cmp r0,#1
-	adr r0,SMSFeedback
-	addeq r0,r0,#12
-	addhi r0,r0,#24
-	ldmia r0,{r1-r3}
-	adr r0,noiseFeedback
-	str r2,[r0],#8
-	str r3,[r0]
+	ldr r3,=(WFEED_SMS<<16)+PFEED_SMS
+	ldreq r3,=(WFEED_SN<<16)+PFEED_SN
+	ldrhi r3,=(WFEED_NCR<<16)+PFEED_NCR
 
 	mov r0,#0
 	mov r2,#snSize/4			;@ 60/4=15
@@ -100,11 +96,12 @@ rLoop:
 	subs r2,r2,#1
 	strpl r0,[snptr,r2,lsl#2]
 	bhi rLoop
-	strh r1,[snptr,#noiseFB]
-	mov r0,#calculatedVolumes
-	str r0,[snptr,#currentBits]
+	strh r3,[snptr,#noiseFB]
+	str r3,[snptr,#noiseType]
+	mov r2,#calculatedVolumes
+	str r2,[snptr,#currentBits]
 	mov r1,#0x8000
-	strh r1,[snptr,r0]
+	strh r1,[snptr,r2]
 
 	bx lr
 
@@ -135,20 +132,6 @@ sn76496GetStateSize:	;@ Out r0=state size.
 ;@----------------------------------------------------------------------------
 	mov r0,#snSize
 	bx lr
-
-;@----------------------------------------------------------------------------
-SMSFeedback:
-	.long PFEED_SMS
-	mov r0,#PFEED_SMS			;@ Periodic noise
-	movne r0,#WFEED_SMS			;@ White noise
-SNFeedback:
-	.long PFEED_SN
-	mov r0,#PFEED_SN			;@ Periodic noise
-	movne r0,#WFEED_SN			;@ White noise
-NCRFeedback:
-	.long PFEED_NCR
-	mov r0,#PFEED_NCR			;@ Periodic noise
-	movne r0,#WFEED_NCR			;@ White noise
 
 ;@----------------------------------------------------------------------------
 sn76496W:					;@ r0 = value, snptr = r12 = struct-pointer
@@ -191,10 +174,9 @@ setNoiseFreq:
 	and r1,r0,#3
 	strb r1,[snptr,#ch3Reg]
 	tst r0,#4
-noiseFeedback:
-	mov r0,#PFEED_SMS			;@ Periodic noise
-	strh r0,[snptr,#rng]
-	movne r0,#WFEED_SMS			;@ White noise
+	ldr r0,[r1,noiseType]
+	strh r0,[r1,#rng]
+	movne r0,r0,lsr#16			;@ White noise
 	strh r0,[snptr,#noiseFB]
 	cmp r1,#3
 	ldrheq r0,[snptr,#ch2Frq]

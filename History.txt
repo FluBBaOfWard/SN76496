@@ -2,6 +2,9 @@ SN76496 revision history
 -=-=-=-=-=-=-=-=-=-=-=-=-
 
 
+V1.6.5 - 2021-11-24 (FluBBa)
+	Changed noise feedback to a member of the struct.
+
 V1.6.0 - 2021-03-05 (FluBBa)
 	Added load/save state.
 
