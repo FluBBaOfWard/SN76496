@@ -174,8 +174,8 @@ setNoiseFreq:
 	and r1,r0,#3
 	strb r1,[snptr,#ch3Reg]
 	tst r0,#4
-	ldr r0,[r1,noiseType]
-	strh r0,[r1,#rng]
+	ldr r0,[snptr,noiseType]
+	strh r0,[snptr,#rng]
 	movne r0,r0,lsr#16			;@ White noise
 	strh r0,[snptr,#noiseFB]
 	cmp r1,#3
