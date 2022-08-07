@@ -1,3 +1,10 @@
+;@
+;@  SN76496.i
+;@  SN76496/SMS sound chip emulator for arm32.
+;@
+;@  Created by Fredrik Ahlström on 2009-08-25.
+;@  Copyright © 2009-2022 Fredrik Ahlström. All rights reserved.
+;@
 ;@ ASM header for the SN76496 emulator
 ;@
 
