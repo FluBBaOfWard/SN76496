@@ -1,5 +1,10 @@
-/*
-*/
+//
+//  SN76496.h
+//  SN76496/SMS sound chip emulator for arm32.
+//
+//  Created by Fredrik Ahlström on 2009-08-25.
+//  Copyright © 2009-2022 Fredrik Ahlström. All rights reserved.
+//
 
 #ifndef SN76496_HEADER
 #define SN76496_HEADER
@@ -18,35 +23,36 @@ typedef struct {
 	u16 ch3Frq;
 	u16 ch3Cnt;
 
-	u32 currentBits;
-
 	u32 rng;
 	u32 noiseFB;
 
-	u8 snAttChg;
+	u16 ch0Volume;
+	u16 ch1Volume;
+	u16 ch2Volume;
+	u16 ch3Volume;
+
+	u32 ch0Reg;
+	u32 ch1Reg;
+	u32 ch2Reg;
+	u32 ch3Reg;
+
 	u8 snLastReg;
-	u8 snPadding[2];
+	u8 snPadding[3];
 
-	s16 calculatedVolumes[16];
-
-	u16 ch0Reg;
-	u16 ch0Att;
-	u16 ch1Reg;
-	u16 ch1Att;
-	u16 ch2Reg;
-	u16 ch2Att;
-	u16 ch3Reg;
-	u16 ch3Att;
-	u32 noiseType;
+	u32 mixLength;
+	u32 mixRate;
+	u32 freqConv;
+	u16 *freqTablePtr;
 } SN76496;
 
+void sn76496Init(SN76496 *chip, u16 *freqtableptr);
 
 /**
- * Reset/initialize SN76496 chip.
- * @param  chipType: selects version of chip, 0=SMS/GG VDP version, 1=SN76496, 2=NCR 8496.
+ * Reset SN76496 chip.
  * @param  *chip: The SN76496 chip.
+ * @param  chipType: selects version of chip, 0=SMS/GG VDP version, 1=SN76496, 2=NCR 8496.
  */
-void sn76496Reset(int chiptype, SN76496 *chip);
+void sn76496Reset(SN76496 *chip, int chipType);
 
 /**
  * Saves the state of the SN76496 chip to the destination.
@@ -70,21 +76,23 @@ int sn76496LoadState(SN76496 *chip, const void *source);
  */
 int sn76496GetStateSize(void);
 
+void sn76496SetMixrate(SN76496 *chip, int);
+void sn76496SetFrequency(SN76496 *chip, int);
+
 /**
- * Runs the sound chip for len number of cycles, renders same amount of samples.
- * @param  *len: Number of cycles to run.
- * @param  *dest: Pointer to buffer where sound is rendered.
+ * Render len number of samples.
  * @param  *chip: The SN76496 chip.
+ * @param  *dest: Pointer to buffer where sound is rendered.
+ * @param  *len: Number of samples to render.
  */
-void sn76496Mixer(int len, s16 *dest, SN76496 *chip);
+void sn76496Mixer(SN76496 *chip, char *dest, int length);
 
 /**
  * Write value to SN76496 chip
- * @param  value: value to write.
  * @param  *chip: The SN76496 chip.
+ * @param  value: value to write.
  */
-void sn76496W(u8 val, SN76496 *chip);
-
+void sn76496W(SN76496 *chip, u8 value);
 
 #ifdef __cplusplus
 }

@@ -2,35 +2,18 @@ SN76496 revision history
 -=-=-=-=-=-=-=-=-=-=-=-=-
 
 
-V1.6.5 - 2021-11-24 (FluBBa)
+V1.6.5 - 2022-08-23 (FluBBa)
+	Added load/save state.
 	Changed noise feedback to a member of the struct.
 
-V1.6.0 - 2021-03-05 (FluBBa)
+V1.1.1 - 2021-03-03 (FluBBa)
 	Added load/save state.
 
-V1.5.0 - 2020-08-09 (FluBBa)
-	Rewrote mixer to use attenuation LUT from bits.
-
-V1.4.1 - 2020-06-05 (FluBBa)
-	Fixed up headers and more.
-
-V1.4.0 - 2018-07-13 (FluBBa)
-	16Bit mono version.
+V1.1.0 - 2019-07-30 (FluBBa)
 	Optimised register writes.
-
-V1.3.0 - 2018-06-19 (FluBBa)
-	Built in 4x down sample.
-
-V1.2.1 - 2016-07-31 (FluBBa)
 	Changed to unified assembler style.
-
-V1.2.0 - 2015-04-26 (FluBBa)
 	Optimised mixer and volume writes.
 	Refactored variable and function names.
-
-V1.1.0 - 2015-03-07 (FluBBa)
-	SN76496, fixed phase reset when setting volume.
-	Changed SN76496 to emulate per cycle and downsample afterwards.
 	Fixed selection of SMS/SG-1000 for the SN76496 sound chip.
 
 V1.0.0 - 2009-08-25 (FluBBa)

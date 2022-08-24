@@ -1,5 +1,7 @@
-SN76496/SN76489, NCR8496 & SMS/GG/MD sound chip.
+This is highly specialised for the GBA but can probably be tweaked
+quite easily to support other platforms as well.
 
-First alloc chip struct, call init with chip type.
-Call SN76496Mixer with chip struct, length and destination.
-Produces 16bit signed mono.
+First call SN76496SetMixrate with 0 or 1 for low or high quality.
+Then call SN76496SetFrequency with the actual clock rate of the chip.
+Finally call SN76496Init to set it up.
+
