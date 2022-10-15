@@ -17,16 +17,16 @@
 	.global sn76496W
 	.global sn76496GGW
 								;@ These values are for the SMS/GG/MD vdp/sound chip.
-.equ PFEED_SMS,	0x8000			;@ Periodic Noise Feedback
-.equ WFEED_SMS,	0x9000			;@ White Noise Feedback
+	.equ PFEED_SMS,	0x8000		;@ Periodic Noise Feedback
+	.equ WFEED_SMS,	0x9000		;@ White Noise Feedback
 
 								;@ These values are for the SN76489/SN76496 sound chip.
-.equ PFEED_SN,	0x4000			;@ Periodic Noise Feedback
-.equ WFEED_SN,	0x6000			;@ White Noise Feedback
+	.equ PFEED_SN,	0x4000		;@ Periodic Noise Feedback
+	.equ WFEED_SN,	0x6000		;@ White Noise Feedback
 
 								;@ These values are for the NCR 8496 sound chip.
-.equ PFEED_NCR,	0x4000			;@ Periodic Noise Feedback
-.equ WFEED_NCR,	0x4400			;@ White Noise Feedback
+	.equ PFEED_NCR,	0x4000		;@ Periodic Noise Feedback
+	.equ WFEED_NCR,	0x4400		;@ White Noise Feedback
 
 	.syntax unified
 	.arm
@@ -53,7 +53,7 @@ sn76496Mixer:				;@ In r0=len, r1=dest, r2=snptr
 	.type   sn76496Mixer STT_FUNC
 ;@----------------------------------------------------------------------------
 	stmfd sp!,{r4-r9,lr}
-	ldmia r2,{r3-r9,lr}		;@ Load freq/addr0-3, currentBits, rng, noisefb, attChg
+	ldmia r2,{r3-r9,lr}			;@ Load freq/addr0-3, currentBits, rng, noisefb, attChg
 	tst lr,#0xff
 	blne calculateVolumes
 ;@----------------------------------------------------------------------------
@@ -127,7 +127,7 @@ rLoop:
 sn76496SaveState:			;@ In r0=destination, r1=snptr. Out r0=state size.
 	.type   sn76496SaveState STT_FUNC
 ;@----------------------------------------------------------------------------
-	mov r2,#snSize
+	mov r2,#snStateEnd-snStateStart
 	stmfd sp!,{r2,lr}
 
 	bl memcpy
@@ -138,17 +138,21 @@ sn76496SaveState:			;@ In r0=destination, r1=snptr. Out r0=state size.
 sn76496LoadState:			;@ In r0=snptr, r1=source. Out r0=state size.
 	.type   sn76496LoadState STT_FUNC
 ;@----------------------------------------------------------------------------
-	stmfd sp!,{lr}
+	stmfd sp!,{r4,lr}
+	mov r4,r0
 
-	mov r2,#snSize
+	mov r2,#snStateEnd-snStateStart
 	bl memcpy
 
-	ldmfd sp!,{lr}
+	mov r0,#1
+	strb r0,[r4,#snAttChg]
+
+	ldmfd sp!,{r4,lr}
 ;@----------------------------------------------------------------------------
 sn76496GetStateSize:		;@ Out r0=state size.
 	.type   sn76496GetStateSize STT_FUNC
 ;@----------------------------------------------------------------------------
-	mov r0,#snSize
+	mov r0,#snStateEnd-snStateStart
 	bx lr
 
 ;@----------------------------------------------------------------------------
