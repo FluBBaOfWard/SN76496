@@ -165,7 +165,7 @@ frequencyCalculate:		;@ snptr=r0=pointer to struct, r1=FREQTABLE
 	mov r5,r1					;@ Destination
 	ldr r6,[snptr,#freqConv]	;@ (sn76496/gba)*4096
 	mov r4,#2048
-frqLoop2:
+frqLoop:
 	mov r0,r6
 	mov r1,r4
 	swi 0x060000				;@ BIOS Div, r0/r1.
@@ -173,7 +173,7 @@ frqLoop2:
 	movmi r0,#0					;@ To remove real high tones.
 	subs r4,r4,#2
 	strh r0,[r5,r4]
-	bhi frqLoop2
+	bhi frqLoop
 
 	ldmfd sp!,{r4-r6,lr}
 	bx lr
@@ -239,5 +239,5 @@ setNoiseF:
 attenuation:
 	.hword 0x3FFF,0x32CB,0x2851,0x2000,0x1966,0x1428,0x1000,0x0CB3,0x0A14,0x0800,0x0659,0x050A,0x0400,0x032C,0x0285,0x0000
 ;@----------------------------------------------------------------------------
-
+	.end
 #endif // #ifdef __arm__
