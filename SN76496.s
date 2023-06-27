@@ -1,4 +1,10 @@
-;@ SN76496 sound chip emulator.
+;@
+;@  SN76496.s
+;@  SN76496/SN76489 sound chip emulator for arm32.
+;@
+;@  Created by Fredrik Ahlström on 2009-08-25.
+;@  Copyright © 2009-2023 Fredrik Ahlström. All rights reserved.
+;@
 #ifdef __arm__
 
 #include "SN76496.i"
