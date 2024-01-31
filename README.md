@@ -10,11 +10,7 @@ Produces signed 16bit interleaved stereo.
 
 ## Projects that use this code
 
-* https://github.com/FluBBaOfWard/FinalizerDS
-* https://github.com/FluBBaOfWard/GreenBeretDS
-* https://github.com/FluBBaOfWard/JailBreakDS
 * https://github.com/FluBBaOfWard/S8DS
-* https://github.com/FluBBaOfWard/YieArDS
 
 ## Credits
 

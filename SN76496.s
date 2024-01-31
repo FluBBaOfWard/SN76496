@@ -47,6 +47,7 @@
 ;@ r7 = CurrentBits.
 ;@ r8 = Noise generator.
 ;@ r9 = Noise feedback.
+;@ r12 = scrap.
 ;@ lr = Mixer reg.
 ;@----------------------------------------------------------------------------
 sn76496Mixer:				;@ In r0=len, r1=dest, r2=snptr
@@ -80,8 +81,8 @@ innerMixLoop:
 	orrcs r7,r7,#0x20
 
 	ldr r12,[r2,r7]
-	add lr,lr,r12
 	sub r0,r0,#1
+	add lr,lr,r12
 	tst r0,#3
 	bne innerMixLoop
 	eor lr,lr,#0x00008000
@@ -96,7 +97,6 @@ innerMixLoop:
 
 	.section .text
 	.align 2
-
 ;@----------------------------------------------------------------------------
 sn76496Reset:				;@ In r0 = chiptype SMS/SN76496, snptr=r1=pointer to struct
 	.type   sn76496Reset STT_FUNC
@@ -116,7 +116,7 @@ rLoop:
 	strh r3,[r1,#rng]
 	mov r2,r3,lsr#16
 	strh r2,[r1,#noiseFB]
-	str r3,[r1,noiseType]
+	str r3,[r1,#noiseType]
 	mov r2,#calculatedVolumes
 	str r2,[r1,#currentBits]	;@ Add offset to calculatedVolumes
 	str r0,[r1,r2]				;@ Clear volume 0
@@ -198,7 +198,7 @@ setNoiseFreq:
 	and r2,r0,#3
 	strb r2,[r1,#ch3Reg]
 	tst r0,#4
-	ldr r0,[r1,noiseType]
+	ldr r0,[r1,#noiseType]
 	strh r0,[r1,#rng]
 	movne r0,r0,lsr#16			;@ White noise
 	strh r0,[r1,#noiseFB]
