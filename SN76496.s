@@ -3,7 +3,7 @@
 ;@  SN76496/SMS sound chip emulator for arm32.
 ;@
 ;@  Created by Fredrik Ahlström on 2009-08-25.
-;@  Copyright © 2009-2022 Fredrik Ahlström. All rights reserved.
+;@  Copyright © 2009-2024 Fredrik Ahlström. All rights reserved.
 ;@
 #ifdef __arm__
 
@@ -101,7 +101,6 @@ innerMixLoop:
 sn76496Reset:				;@ In r0 = chiptype SMS/SN76496, snptr=r1=pointer to struct
 	.type   sn76496Reset STT_FUNC
 ;@----------------------------------------------------------------------------
-
 	cmp r0,#1
 	ldr r3,=(WFEED_SMS<<16)+PFEED_SMS
 	ldreq r3,=(WFEED_SN<<16)+PFEED_SN
@@ -113,11 +112,14 @@ rLoop:
 	subs r2,r2,#1
 	strpl r0,[r1,r2,lsl#2]
 	bhi rLoop
-	strh r3,[r1,#noiseFB]
+
+	strh r3,[r1,#rng]
+	mov r2,r3,lsr#16
+	strh r2,[r1,#noiseFB]
 	str r3,[r1,noiseType]
 	mov r2,#calculatedVolumes
 	str r2,[r1,#currentBits]	;@ Add offset to calculatedVolumes
-	str r0,[r1,r2]
+	str r0,[r1,r2]				;@ Clear volume 0
 	mov r0,#0xFF
 	strb r0,[r1,#ggStereo]
 
@@ -138,16 +140,14 @@ sn76496SaveState:			;@ In r0=destination, r1=snptr. Out r0=state size.
 sn76496LoadState:			;@ In r0=snptr, r1=source. Out r0=state size.
 	.type   sn76496LoadState STT_FUNC
 ;@----------------------------------------------------------------------------
-	stmfd sp!,{r4,lr}
-	mov r4,r0
+	stmfd sp!,{r0,lr}
 
 	mov r2,#snStateEnd-snStateStart
 	bl memcpy
+	ldmfd sp!,{r0,lr}
+	mov r1,#1
+	strb r1,[r0,#snAttChg]
 
-	mov r0,#1
-	strb r0,[r4,#snAttChg]
-
-	ldmfd sp!,{r4,lr}
 ;@----------------------------------------------------------------------------
 sn76496GetStateSize:		;@ Out r0=state size.
 	.type   sn76496GetStateSize STT_FUNC
@@ -236,34 +236,28 @@ calculateVolumes:			;@ r2 = snptr
 
 	ldrb r0,[r2,#ggStereo]
 	mov r1,#-1
-	tst r0,#0x01
-	biceq r3,r3,r1,lsl#16
-	tst r0,#0x02
-	biceq r4,r4,r1,lsl#16
-	tst r0,#0x04
-	biceq r5,r5,r1,lsl#16
-	tst r0,#0x08
-	biceq r6,r6,r1,lsl#16
-	tst r0,#0x10
-	biceq r3,r3,r1,lsr#16
-	tst r0,#0x20
-	biceq r4,r4,r1,lsr#16
-	tst r0,#0x40
-	biceq r5,r5,r1,lsr#16
-	tst r0,#0x80
-	biceq r6,r6,r1,lsr#16
+	teq r0,r0,lsl#31
+	bicpl r3,r3,r1,lsl#16
+	biccc r4,r4,r1,lsl#16
+	teq r0,r0,lsl#29
+	bicpl r5,r5,r1,lsl#16
+	biccc r6,r6,r1,lsl#16
+	teq r0,r0,lsl#27
+	bicpl r3,r3,r1,lsr#16
+	biccc r4,r4,r1,lsr#16
+	teq r0,r0,lsl#25
+	bicpl r5,r5,r1,lsr#16
+	biccc r6,r6,r1,lsr#16
 
 	add r12,r2,#calculatedVolumes
 	mov r1,#15
 volLoop:
-	ands r0,r1,#0x01
-	movne r0,r3
-	tst r1,#0x02
-	addne r0,r0,r4
-	tst r1,#0x04
-	addne r0,r0,r5
-	tst r1,#0x08
-	addne r0,r0,r6
+	movs r0,r1,lsl#31
+	movmi r0,r3
+	addcs r0,r0,r4
+	teq r1,r1,lsl#29
+	addmi r0,r0,r5
+	addcs r0,r0,r6
 	str r0,[r12,r1,lsl#2]
 	subs r1,r1,#1
 	bne volLoop

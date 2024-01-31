@@ -2,6 +2,10 @@ SN76496 revision history
 -=-=-=-=-=-=-=-=-=-=-=-=-
 
 
+V1.6.3 - 2024-01-31 (FluBBa)
+	Small optimization to calculateVolume.
+	Tweaked initialization of noise.
+
 V1.6.1 - 2022-10-15 (FluBBa)
 	Smaller size of save state.
 
