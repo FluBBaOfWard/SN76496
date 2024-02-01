@@ -83,7 +83,7 @@ int sn76496GetStateSize(void);
  * @param  *dest: Pointer to buffer where sound is rendered.
  * @param  *chip: The SN76496 chip.
  */
-void sn76496Mixer(int len, void *dest, SN76496 *chip);
+void sn76496Mixer(int len, s16 *dest, SN76496 *chip);
 
 /**
  * Write value to SN76496 chip
