@@ -16,16 +16,18 @@
 	.global sn76496Mixer
 	.global sn76496W
 								;@ These values are for the SMS/GG/MD vdp/sound chip.
-.equ PFEED_SMS,	0x8000			;@ Periodic Noise Feedback
-.equ WFEED_SMS,	0x9000			;@ White Noise Feedback
+	.equ PFEED_SMS,	0x8000		;@ Periodic Noise Feedback
+	.equ WFEED_SMS,	0x9000		;@ White Noise Feedback
 
 								;@ These values are for the SN76489/SN76496 sound chip.
-.equ PFEED_SN,	0x4000			;@ Periodic Noise Feedback
-.equ WFEED_SN,	0x6000			;@ White Noise Feedback
+	.equ PFEED_SN,	0x4000		;@ Periodic Noise Feedback
+	.equ WFEED_SN,	0x6000		;@ White Noise Feedback
 
 								;@ These values are for the NCR 8496 sound chip.
-.equ PFEED_NCR,	0x4000			;@ Periodic Noise Feedback
-.equ WFEED_NCR,	0x4400			;@ White Noise Feedback
+	.equ PFEED_NCR,	0x4000		;@ Periodic Noise Feedback
+	.equ WFEED_NCR,	0x4400		;@ White Noise Feedback
+
+#define SN_ADDITION 0x00400000
 
 	.syntax unified
 	.arm
@@ -53,31 +55,42 @@ sn76496Mixer:				;@ r0=len, r1=dest, r2=snptr
 ;@----------------------------------------------------------------------------
 	stmfd sp!,{r4-r9,lr}
 	ldmia r2,{r3-r9,lr}		;@ Load freq/addr0-3, currentBits, rng, noisefb, attChg
+#ifdef SN_UPSHIFT
+	mov r0,r0,lsl#SN_UPSHIFT
+#endif
 	tst lr,#0xff
 	blne calculateVolumes
 ;@----------------------------------------------------------------------------
 mixLoop:
-	adds r3,r3,#0x00400000
+	adds r3,r3,#SN_ADDITION
 	subcs r3,r3,r3,lsl#16
 	eorcs r7,r7,#0x02
 
-	adds r4,r4,#0x00400000
+	adds r4,r4,#SN_ADDITION
 	subcs r4,r4,r4,lsl#16
 	eorcs r7,r7,#0x04
 
-	adds r5,r5,#0x00400000
+	adds r5,r5,#SN_ADDITION
 	subcs r5,r5,r5,lsl#16
 	eorcs r7,r7,#0x08
 
-	adds r6,r6,#0x00400000		;@ 0x00200000?
+	adds r6,r6,#SN_ADDITION		;@ 0x00200000?
 	subcs r6,r6,r6,lsl#16
 	biccs r7,r7,#0x10
 	movscs r8,r8,lsr#1
 	eorcs r8,r8,r9
 	orrcs r7,r7,#0x10
 
+#ifdef SN_UPSHIFT
+	sub r0,r0,#1
+	tst r0,#(1<<SN_UPSHIFT)-1
+	bne mixLoop
+	ldrh lr,[r2,r7]
+	cmp r0,#0
+#else
 	ldrh lr,[r2,r7]
 	subs r0,r0,#1
+#endif
 	strhpl lr,[r1],#2
 	bhi mixLoop
 
@@ -117,7 +130,7 @@ rLoop:
 	bx lr
 
 ;@----------------------------------------------------------------------------
-sn76496SaveState:		;@ In r0=destination, r1=snptr. Out r0=state size.
+sn76496SaveState:			;@ In r0=destination, r1=snptr. Out r0=state size.
 	.type   sn76496SaveState STT_FUNC
 ;@----------------------------------------------------------------------------
 	mov r2,#snSize
@@ -128,7 +141,7 @@ sn76496SaveState:		;@ In r0=destination, r1=snptr. Out r0=state size.
 	ldmfd sp!,{r0,lr}
 	bx lr
 ;@----------------------------------------------------------------------------
-sn76496LoadState:		;@ In r0=snptr, r1=source. Out r0=state size.
+sn76496LoadState:			;@ In r0=snptr, r1=source. Out r0=state size.
 	.type   sn76496LoadState STT_FUNC
 ;@----------------------------------------------------------------------------
 	stmfd sp!,{r0,lr}
@@ -139,7 +152,7 @@ sn76496LoadState:		;@ In r0=snptr, r1=source. Out r0=state size.
 	mov r1,#1
 	strb r1,[r0,#snAttChg]
 ;@----------------------------------------------------------------------------
-sn76496GetStateSize:	;@ Out r0=state size.
+sn76496GetStateSize:		;@ Out r0=state size.
 	.type   sn76496GetStateSize STT_FUNC
 ;@----------------------------------------------------------------------------
 	mov r0,#snSize
@@ -232,7 +245,7 @@ volLoop:
 	ldmfd sp!,{r0,r1,r3-r6,pc}
 
 ;@----------------------------------------------------------------------------
-attenuation:						;@ each step * 0.79370053 (-2dB?)
+attenuation:				;@ each step * 0.79370053 (-2dB?)
 	.long 0xFFFF,0xCB30,0xA145,0x8000,0x6598,0x50A3,0x4000,0x32CC
 	.long 0x2851,0x2000,0x1966,0x1428,0x1000,0x0CB3,0x0A14,0x0000
 ;@----------------------------------------------------------------------------

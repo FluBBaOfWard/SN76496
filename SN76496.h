@@ -76,12 +76,13 @@ int sn76496LoadState(SN76496 *chip, const void *source);
 int sn76496GetStateSize(void);
 
 /**
- * Runs the sound chip for len number of cycles, renders same amount of samples.
- * @param  *len: Number of cycles to run.
+ * Renders count amount of samples, clocks the chip the same amount.
+ * Internal oversampling can be set by defining SN_UPSHIFT to a number.
+ * @param  count: Number of samples to render.
  * @param  *dest: Pointer to buffer where sound is rendered.
  * @param  *chip: The SN76496 chip.
  */
-void sn76496Mixer(int len, s16 *dest, SN76496 *chip);
+void sn76496Mixer(int count, s16 *dest, SN76496 *chip);
 
 /**
  * Write value to SN76496 chip

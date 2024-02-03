@@ -8,7 +8,9 @@
 ;@ ASM header for the SN76496 emulator
 ;@
 
-	snptr			.req r12
+#if !__ASSEMBLER__
+	#error This header file is only for use in assembly files!
+#endif
 
 							;@ SN76496.s
 	.struct 0
