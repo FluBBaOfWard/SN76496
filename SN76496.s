@@ -28,6 +28,11 @@
 	.equ PFEED_NCR,	0x4000		;@ Periodic Noise Feedback
 	.equ WFEED_NCR,	0x4400		;@ White Noise Feedback
 
+#if !defined(SN_UPSHIFT)
+	#define SN_UPSHIFT (2)
+#endif
+#define SN_ADDITION 0x00400000
+
 	.syntax unified
 	.arm
 
@@ -40,40 +45,41 @@
 #endif
 	.align 2
 ;@----------------------------------------------------------------------------
-;@ r0 = Mix length.
-;@ r1 = Mixerbuffer.
-;@ r2 = snptr.
+;@ r0  = Mix length.
+;@ r1  = Mixerbuffer.
+;@ r2  = snptr.
 ;@ r3 -> r6 = pos+freq.
-;@ r7 = CurrentBits.
-;@ r8 = Noise generator.
-;@ r9 = Noise feedback.
-;@ r12 = scrap.
-;@ lr = Mixer reg.
+;@ r7  = CurrentBits.
+;@ r8  = Noise generator.
+;@ r9  = Noise feedback.
+;@ r12 = Scrap.
+;@ lr  = Mixer reg.
 ;@----------------------------------------------------------------------------
 sn76496Mixer:				;@ In r0=len, r1=dest, r2=snptr
 	.type   sn76496Mixer STT_FUNC
 ;@----------------------------------------------------------------------------
 	stmfd sp!,{r4-r9,lr}
 	ldmia r2,{r3-r9,lr}			;@ Load freq/addr0-3, currentBits, rng, noisefb, attChg
+	mov r0,r0,lsl#SN_UPSHIFT
 	tst lr,#0xff
 	blne calculateVolumes
 ;@----------------------------------------------------------------------------
 mixLoop:
 	mov lr,#0x80000000
 innerMixLoop:
-	adds r3,r3,#0x00400000
+	adds r3,r3,#SN_ADDITION
 	subcs r3,r3,r3,lsl#16
 	eorcs r7,r7,#0x04
 
-	adds r4,r4,#0x00400000
+	adds r4,r4,#SN_ADDITION
 	subcs r4,r4,r4,lsl#16
 	eorcs r7,r7,#0x08
 
-	adds r5,r5,#0x00400000
+	adds r5,r5,#SN_ADDITION
 	subcs r5,r5,r5,lsl#16
 	eorcs r7,r7,#0x10
 
-	adds r6,r6,#0x00400000		;@ 0x00200000?
+	adds r6,r6,#SN_ADDITION		;@ 0x00200000?
 	subcs r6,r6,r6,lsl#16
 	biccs r7,r7,#0x20
 	movscs r8,r8,lsr#1
@@ -82,8 +88,8 @@ innerMixLoop:
 
 	ldr r12,[r2,r7]
 	sub r0,r0,#1
+	tst r0,#(1<<SN_UPSHIFT)-1
 	add lr,lr,r12
-	tst r0,#3
 	bne innerMixLoop
 	eor lr,lr,#0x00008000
 	cmp r0,#0

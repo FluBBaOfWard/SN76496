@@ -77,13 +77,13 @@ int sn76496LoadState(SN76496 *chip, const void *source);
 int sn76496GetStateSize(void);
 
 /**
- * Runs the sound chip for len number of cycles, output is 1/4 samples,
- * so if actual chip would output 218kHz this mixer would render at ~55kHz.
- * @param  *len: Number of cycles to run.
+ * Runs the sound chip for count number of cycles * 4,
+ * so if actual chip would output 218kHz this mixer would output at ~55kHz.
+ * @param  *count: Number of samples to generate.
  * @param  *dest: Pointer to buffer where sound is rendered.
  * @param  *chip: The SN76496 chip.
  */
-void sn76496Mixer(int len, s16 *dest, SN76496 *chip);
+void sn76496Mixer(int count, s16 *dest, SN76496 *chip);
 
 /**
  * Write value to SN76496 chip
