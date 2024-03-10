@@ -14,6 +14,7 @@ make the internal clock speed 4 times higher.
 * <https://github.com/FluBBaOfWard/FinalizerDS>
 * <https://github.com/FluBBaOfWard/GreenBeretDS>
 * <https://github.com/FluBBaOfWard/JailBreakDS>
+* <https://github.com/FluBBaOfWard/K80DS>
 * <https://github.com/FluBBaOfWard/YieArDS>
 * <https://github.com/wavemotion-dave/ColecoDS>
 * <https://github.com/wavemotion-dave/DS994a>
