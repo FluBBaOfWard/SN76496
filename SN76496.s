@@ -58,9 +58,9 @@
 sn76496Mixer:				;@ In r0=len, r1=dest, r2=snptr
 	.type   sn76496Mixer STT_FUNC
 ;@----------------------------------------------------------------------------
+	mov r0,r0,lsl#SN_UPSHIFT
 	stmfd sp!,{r4-r9,lr}
 	ldmia r2,{r3-r9,lr}			;@ Load freq/addr0-3, currentBits, rng, noisefb, attChg
-	mov r0,r0,lsl#SN_UPSHIFT
 	tst lr,#0xff
 	blne calculateVolumes
 ;@----------------------------------------------------------------------------

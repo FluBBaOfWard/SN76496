@@ -5,12 +5,10 @@
 ;@  Created by Fredrik Ahlström on 2009-08-25.
 ;@  Copyright © 2009-2024 Fredrik Ahlström. All rights reserved.
 ;@
-;@ ASM header for the SN76496 emulator
-;@
 
 #if !__ASSEMBLER__
 	#error This header file is only for use in assembly files!
-#endif	// !__ASSEMBLER__
+#endif
 
 							;@ SN76496.s
 	.struct 0
