@@ -5,7 +5,6 @@
 //  Created by Fredrik Ahlström on 2009-08-25.
 //  Copyright © 2009-2022 Fredrik Ahlström. All rights reserved.
 //
-
 #ifndef SN76496_HEADER
 #define SN76496_HEADER
 

@@ -33,10 +33,12 @@
 	.syntax unified
 	.arm
 
-#ifdef GBA
+#ifdef NDS
+	.section .itcm, "ax", %progbits		;@ For the NDS ARM9
+#elif GBA
 	.section .iwram, "ax", %progbits	;@ For the GBA
 #else
-	.section .text
+	.section .text						;@ For everything else
 #endif
 	.align 2
 ;@----------------------------------------------------------------------------
@@ -54,7 +56,6 @@ sn76496Mixer:				;@ r0=snptr, r1=dest, r2=len
 ;@----------------------------------------------------------------------------
 	stmfd sp!,{r4-r11,lr}
 	ldmia snptr,{r3-r10}		;@ Load freq,addr,rng, noisefb,vol0, vol1
-volF:
 	mov r11,#0x80
 ;@----------------------------------------------------------------------------
 mixLoop:
@@ -179,7 +180,7 @@ frqLoop:
 	bx lr
 
 ;@----------------------------------------------------------------------------
-	.section .ewram,"ax"
+	.section .ewram, "ax", %progbits
 	.align 2
 ;@----------------------------------------------------------------------------
 sn76496W:					;@ snptr = r0 = struct-pointer, r1 = value
