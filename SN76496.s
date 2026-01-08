@@ -3,7 +3,7 @@
 ;@  SN76496/SN76489 sound chip emulator for arm32.
 ;@
 ;@  Created by Fredrik Ahlström on 2009-08-25.
-;@  Copyright © 2009-2024 Fredrik Ahlström. All rights reserved.
+;@  Copyright © 2009-2026 Fredrik Ahlström. All rights reserved.
 ;@
 #ifdef __arm__
 
@@ -40,7 +40,7 @@
 	.arm
 
 #ifdef NDS
-	.section .itcm						;@ For the NDS
+	.section .itcm, "ax", %progbits		;@ For the NDS ARM9
 #elif GBA
 	.section .iwram, "ax", %progbits	;@ For the GBA
 #else
@@ -61,9 +61,6 @@
 sn76496Mixer:				;@ r0=len, r1=dest, r2=snptr
 	.type   sn76496Mixer STT_FUNC
 ;@----------------------------------------------------------------------------
-#ifdef SN_UPSHIFT
-	mov r0,r0,lsl#USHIFT
-#endif
 	stmfd sp!,{r4-r9,lr}
 	ldmia r2,{r3-r9,lr}		;@ Load freq/addr0-3, currentBits, rng, noisefb, attChg
 	tst lr,#0xff
@@ -95,15 +92,13 @@ innerMixLoop:
 
 #ifdef SN_UPSHIFT
 	ldrh r12,[r2,r7]
-	sub r0,r0,#1
-	tst r0,#(1<<USHIFT)-1
+	adds r0,r0,#0x100000000>>USHIFT
 	add lr,lr,r12
-	bne innerMixLoop
-	cmp r0,#0
+	bcc innerMixLoop
 #else
 	ldrh lr,[r2,r7]
-	subs r0,r0,#1
 #endif
+	subs r0,r0,#1
 	strhpl lr,[r1],#2
 	bhi mixLoop
 
