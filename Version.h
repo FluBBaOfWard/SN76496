@@ -1,1 +1,1 @@
-#define ARMSNGGVERSION "V1.6.3"
+#define ARMSNGGVERSION "V1.6.7"

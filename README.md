@@ -1,4 +1,4 @@
-# SN76496 V1.6.6
+# SN76496 V1.6.7
 
 SN76496/SN76489, SMS sound chip plus GG stereo extension for ARM32.
 
@@ -16,6 +16,8 @@ Produces signed 16bit interleaved stereo.
 
 Fredrik Ahlström
 
-X/Twitter @TheRealFluBBa
+<https://bsky.app/profile/therealflubba.bsky.social>
 
 <https://www.github.com/FluBBaOfWard>
+
+X/Twitter @TheRealFluBBa

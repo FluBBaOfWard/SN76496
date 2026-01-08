@@ -37,7 +37,7 @@
 	.arm
 
 #ifdef NDS
-	.section .itcm						;@ For the NDS
+	.section .itcm, "ax", %progbits		;@ For the NDS
 #elif GBA
 	.section .iwram, "ax", %progbits	;@ For the GBA
 #else
@@ -58,7 +58,6 @@
 sn76496Mixer:				;@ In r0=len, r1=dest, r2=snptr
 	.type   sn76496Mixer STT_FUNC
 ;@----------------------------------------------------------------------------
-	mov r0,r0,lsl#SN_UPSHIFT
 	stmfd sp!,{r4-r9,lr}
 	ldmia r2,{r3-r9,lr}			;@ Load freq/addr0-3, currentBits, rng, noisefb, attChg
 	tst lr,#0xff
@@ -87,12 +86,11 @@ innerMixLoop:
 	orrcs r7,r7,#0x20
 
 	ldr r12,[r2,r7]
-	sub r0,r0,#1
-	tst r0,#(1<<SN_UPSHIFT)-1
+	adds r0,r0,#0x100000000>>SN_UPSHIFT
 	add lr,lr,r12
-	bne innerMixLoop
+	bcc innerMixLoop
 	eor lr,lr,#0x00008000
-	cmp r0,#0
+	subs r0,r0,#1
 	strpl lr,[r1],#4
 	bhi mixLoop
 

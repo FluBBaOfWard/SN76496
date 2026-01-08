@@ -3,9 +3,8 @@
 ;@  SN76496/SMS sound chip emulator for arm32.
 ;@
 ;@  Created by Fredrik Ahlström on 2009-08-25.
-;@  Copyright © 2009-2024 Fredrik Ahlström. All rights reserved.
+;@  Copyright © 2009-2026 Fredrik Ahlström. All rights reserved.
 ;@
-
 #if !__ASSEMBLER__
 	#error This header file is only for use in assembly files!
 #endif
@@ -47,7 +46,7 @@ noiseType:		.long 0
 snPadding2:		.space 3*4
 calculatedVolumes:	.space 16*2*2
 
-	snSize:
+snSize:
 
 ;@----------------------------------------------------------------------------
 
