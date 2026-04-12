@@ -28,8 +28,7 @@ rng:			.long 0
 noiseFB:		.long 0
 
 snAttChg:		.byte 0
-snLastReg:		.byte 0
-snPadding:		.space 2
+snPadding:		.space 3
 
 calculatedVolumes:	.space 16*2
 
@@ -41,6 +40,10 @@ ch2Reg:			.short 0
 ch2Att:			.short 0
 ch3Reg:			.short 0
 ch3Att:			.short 0
+
+snLastReg:		.long 0
+
+snStateEnd:
 
 noiseType:		.long 0
 snSize:

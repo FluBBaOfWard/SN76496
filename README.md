@@ -1,9 +1,9 @@
-# SN76496 V1.6.7
+# SN76496 V1.6.8
 
 SN76496/SN76489, NCR8496 & SMS/GG/MD sound chip emulator for ARM32.
 
 First alloc chip struct, call sn76496Reset with chip type & struct.
-Call SN76496Mixer with length, destination and chip struct.
+Call sn76496Mixer with length, destination and chip struct.
 Produces signed 16bit mono.
 
 You define SN_UPSHIFT to a number, this is how many times the internal
