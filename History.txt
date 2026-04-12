@@ -2,6 +2,10 @@ SN76496 revision history
 -=-=-=-=-=-=-=-=-=-=-=-=-
 
 
+V1.6.7 - 2026-04-12 (FluBBa)
+	Removed unused variables.
+	Fixed noise startup values.
+
 V1.6.5 - 2022-08-23 (FluBBa)
 	Added load/save state.
 	Changed noise feedback to a member of the struct.

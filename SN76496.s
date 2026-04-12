@@ -3,7 +3,7 @@
 ;@  SN76496/SMS sound chip emulator for arm32.
 ;@
 ;@  Created by Fredrik Ahlström on 2009-08-25.
-;@  Copyright © 2009-2022 Fredrik Ahlström. All rights reserved.
+;@  Copyright © 2009-2026 Fredrik Ahlström. All rights reserved.
 ;@
 #ifdef __arm__
 
@@ -43,14 +43,14 @@
 	.align 2
 ;@----------------------------------------------------------------------------
 ;@ r0 = snptr.
-;@ r1 = mixerbuffer.
-;@ r2 = mix length.
+;@ r1 = Mixerbuffer.
+;@ r2 = Mix length.
 ;@ r3 -> r6 = pos+freq.
-;@ r7 = noise generator.
-;@ r8 = noise feedback.
-;@ r9 = ch0/1 volumes.
-;@ r10 = ch2/3 volumes.
-;@ lr = mixer reg.
+;@ r7 = Noise generator.
+;@ r8 = Noise feedback.
+;@ r9 = Ch0/1 volumes.
+;@ r10 = Ch2/3 volumes.
+;@ lr = Mixer reg.
 ;@----------------------------------------------------------------------------
 sn76496Mixer:				;@ r0=snptr, r1=dest, r2=len
 ;@----------------------------------------------------------------------------
@@ -101,17 +101,19 @@ sn76496Reset:				;@ snptr=r0=pointer to struct, r1 = chiptype SMS/SN76496
 	ldrhi r3,=(WFEED_NCR<<16)+PFEED_NCR
 
 	mov r1,#0
-	mov r2,#(snSize-16)/4		;@ 52/4=13
+	mov r2,#snStateEnd/4		;@ 52/4=13
 rLoop:
 	subs r2,r2,#1
 	strpl r1,[snptr,r2,lsl#2]
 	bhi rLoop
-	strh r3,[snptr,#noiseFB]
 	str r3,[snptr,#noiseType]
+	strh r3,[snptr,#rng]
+	mov r3,r3,lsr#16
+	strh r3,[snptr,#noiseFB]
 
 	bx lr
 
-#define STATE_SIZE (0x34)
+#define STATE_SIZE (snStateEnd)
 ;@----------------------------------------------------------------------------
 sn76496SaveState:			;@ In r0=destination, r1=snptr. Out r0=state size.
 	.type   sn76496SaveState STT_FUNC
@@ -140,15 +142,12 @@ sn76496GetStateSize:		;@ Out r0=state size.
 	mov r0,#STATE_SIZE
 	bx lr
 ;@----------------------------------------------------------------------------
-sn76496SetMixrate:		;@ snptr=r0=pointer to struct, r1 in. 0 = low, 1 = high
+sn76496SetMixrate:		;@ snptr=r0=pointer to struct, r1 in 0 = low, 1 = high
 ;@----------------------------------------------------------------------------
 	cmp r1,#0
 	moveq r1,#924				;@ low,  18157Hz
 	movne r1,#532				;@ high, 31536Hz
 	str r1,[snptr,#mixRate]
-	moveq r1,#304				;@ low
-	movne r1,#528				;@ high
-	str r1,[snptr,#mixLength]
 	bx lr
 ;@----------------------------------------------------------------------------
 sn76496SetFrequency:		;@ snptr=r0=pointer to struct, r1=frequency of chip.
