@@ -49,8 +49,8 @@
 ;@ r1  = Mixerbuffer.
 ;@ r2  = snptr.
 ;@ r3 -> r6 = pos+freq.
-;@ r7  = CurrentBits.
-;@ r8  = Noise generator.
+;@ r7  = Noise generator.
+;@ r8  = CurrentBits.
 ;@ r9  = Noise feedback.
 ;@ r12 = Scrap.
 ;@ lr  = Mixer reg.
@@ -59,7 +59,7 @@ sn76496Mixer:				;@ In r0=len, r1=dest, r2=snptr
 	.type   sn76496Mixer STT_FUNC
 ;@----------------------------------------------------------------------------
 	stmfd sp!,{r4-r9,lr}
-	ldmia r2,{r3-r9,lr}			;@ Load freq/addr0-3, currentBits, rng, noisefb, attChg
+	ldmia r2,{r3-r9,lr}			;@ Load freq/addr0-3, rng, currentBits, noisefb, attChg
 	tst lr,#0xff
 	blne calculateVolumes
 ;@----------------------------------------------------------------------------
@@ -68,24 +68,24 @@ mixLoop:
 innerMixLoop:
 	adds r3,r3,#SN_ADDITION
 	subcs r3,r3,r3,lsl#16
-	eorcs r7,r7,#0x04
+	eorcs r8,r8,#0x04
 
 	adds r4,r4,#SN_ADDITION
 	subcs r4,r4,r4,lsl#16
-	eorcs r7,r7,#0x08
+	eorcs r8,r8,#0x08
 
 	adds r5,r5,#SN_ADDITION
 	subcs r5,r5,r5,lsl#16
-	eorcs r7,r7,#0x10
+	eorcs r8,r8,#0x10
 
 	adds r6,r6,#SN_ADDITION		;@ 0x00200000?
 	subcs r6,r6,r6,lsl#16
-	biccs r7,r7,#0x20
-	movscs r8,r8,lsr#1
-	eorcs r8,r8,r9
-	orrcs r7,r7,#0x20
+	biccs r8,r8,#0x20
+	movscs r7,r7,lsr#1
+	eorcs r7,r7,r9
+	orrcs r8,r8,#0x20
 
-	ldr r12,[r2,r7]
+	ldr r12,[r2,r8]
 	adds r0,r0,#0x100000000>>SN_UPSHIFT
 	add lr,lr,r12
 	bcc innerMixLoop
@@ -94,7 +94,7 @@ innerMixLoop:
 	strpl lr,[r1],#4
 	bhi mixLoop
 
-	stmia r2,{r3-r8}			;@ Writeback freq,addr,currentBits,rng
+	stmia r2,{r3-r8}			;@ Writeback freq,addr,rng,currentBits
 	ldmfd sp!,{r4-r9,lr}
 	bx lr
 ;@----------------------------------------------------------------------------
@@ -117,10 +117,10 @@ rLoop:
 	strpl r0,[r1,r2,lsl#2]
 	bhi rLoop
 
-	strh r3,[r1,#rng]
-	mov r2,r3,lsr#16
-	strh r2,[r1,#noiseFB]
 	str r3,[r1,#noiseType]
+	strh r3,[r1,#rng]
+	mov r3,r3,lsr#16
+	strh r3,[r1,#noiseFB]
 	mov r2,#calculatedVolumes
 	str r2,[r1,#currentBits]	;@ Add offset to calculatedVolumes
 	str r0,[r1,r2]				;@ Clear volume 0
@@ -133,7 +133,7 @@ rLoop:
 sn76496SaveState:			;@ In r0=destination, r1=snptr. Out r0=state size.
 	.type   sn76496SaveState STT_FUNC
 ;@----------------------------------------------------------------------------
-	mov r2,#snStateEnd-snStateStart
+	mov r2,#snStateEnd
 	stmfd sp!,{r2,lr}
 
 	bl memcpy
@@ -146,7 +146,7 @@ sn76496LoadState:			;@ In r0=snptr, r1=source. Out r0=state size.
 ;@----------------------------------------------------------------------------
 	stmfd sp!,{r0,lr}
 
-	mov r2,#snStateEnd-snStateStart
+	mov r2,#snStateEnd
 	bl memcpy
 	ldmfd sp!,{r0,lr}
 	mov r1,#1
@@ -163,11 +163,10 @@ sn76496GetStateSize:		;@ Out r0=state size.
 sn76496W:					;@ r0 = value, r1 = struct-pointer
 	.type   sn76496W STT_FUNC
 ;@----------------------------------------------------------------------------
-	tst r0,#0x80
-	andne r12,r0,#0x70
-	strbne r12,[r1,#snLastReg]
-	ldrbeq r12,[r1,#snLastReg]
-	movs r12,r12,lsr#5
+	movs r12,r0,lsl#25
+	ldrcc r12,[r1,#snLastReg]
+	strcs r12,[r1,#snLastReg]
+	movs r12,r12,lsr#30
 	add r2,r1,r12,lsl#2
 	bcc setFreq
 doVolume:
@@ -179,23 +178,22 @@ doVolume:
 	bx lr
 
 setFreq:
-	cmp r12,#3					;@ Noise channel
-	beq setNoiseFreq
+	cmp r12,#2					;@ Check channel 2/3
+	bhi setNoiseFreq			;@ Noise channel
+	ldrbeq r12,[r1,#ch3Reg]		;@ cache Ch3 reg
 	tst r0,#0x80
+	ldrh r1,[r2,#ch0Frq]
+	movne r0,r0,lsl#28
 	andeq r0,r0,#0x3F
-	movne r0,r0,lsl#4
-	strbeq r0,[r2,#ch0Reg+1]
-	strbne r0,[r2,#ch0Reg]
-	ldrh r0,[r2,#ch0Reg]
-	movs r0,r0,lsl#2
+	orrne r0,r0,r1,lsr#10
+	orreq r0,r0,r1,lsl#22
+	mov r0,r0,ror#22
 	cmp r0,#0x0180				;@ We set any value under 6 to 1 to fix aliasing.
 	movmi r0,#0x0040			;@ Value zero is same as 1 on SMS.
 	strh r0,[r2,#ch0Frq]
 
-	cmp r12,#2					;@ Ch2
-	ldrbeq r2,[r1,#ch3Reg]
-	cmpeq r2,#3
-	strheq r0,[r1,#ch3Frq]
+	cmp r12,#3
+	strheq r0,[r2,#ch0Frq+4]	;@ This means Ch3Frq
 	bx lr
 
 setNoiseFreq:
@@ -206,10 +204,10 @@ setNoiseFreq:
 	strh r0,[r1,#rng]
 	movne r0,r0,lsr#16			;@ White noise
 	strh r0,[r1,#noiseFB]
-	mov r12,#0x0400				;@ These values sound ok
-	mov r12,r12,lsl r2
 	cmp r2,#3
 	ldrheq r12,[r1,#ch2Frq]
+	movne r12,#0x0400			;@ These values sound ok
+	movne r12,r12,lsl r2
 	strh r12,[r1,#ch3Frq]
 	bx lr
 
@@ -270,10 +268,10 @@ volLoop:
 	ldmfd sp!,{r0,r1,r3-r6}
 	bx lr
 ;@----------------------------------------------------------------------------
-attenuation:						;@ each step * 0.79370053 (-2dB?)
+attenuation:						;@ each step * 0.79370053 (-1dB?)
 	.long 0x3FFF3FFF,0x32CB32CB,0x28512851,0x20002000,0x19661966,0x14281428,0x10001000,0x0CB30CB3
 	.long 0x0A140A14,0x08000800,0x06590659,0x050A050A,0x04000400,0x032C032C,0x02850285,0x00000000
-attenuation1_4:						;@ each step * 0.79370053 (-2dB?)
+attenuation1_4:						;@ each step * 0.79370053 (-1dB?)
 	.long 0x0FFF0FFF,0x0CB30CB3,0x0A140A14,0x08000800,0x06590659,0x050A050A,0x04000400,0x032C032C
 	.long 0x02850285,0x02000200,0x01960196,0x01430143,0x01000100,0x00CB00CB,0x00A100A1,0x00000000
 ;@----------------------------------------------------------------------------

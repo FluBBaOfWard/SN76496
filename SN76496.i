@@ -22,15 +22,13 @@ ch2Cnt:			.short 0
 ch3Frq:			.short 0
 ch3Cnt:			.short 0
 
-currentBits:	.long 0
-
 rng:			.long 0
+currentBits:	.long 0
 noiseFB:		.long 0
 
 snAttChg:		.byte 0
-snLastReg:		.byte 0
 ggStereo:		.byte 0
-snPadding:		.space 1
+snPadding:		.space 2
 
 ch0Reg:			.short 0
 ch0Att:			.short 0
@@ -41,9 +39,11 @@ ch2Att:			.short 0
 ch3Reg:			.short 0
 ch3Att:			.short 0
 
+snLastReg:		.long 0
+
 snStateEnd:
 noiseType:		.long 0
-snPadding2:		.space 3*4
+snPadding2:		.space 2*4
 calculatedVolumes:	.space 16*2*2
 
 snSize:
