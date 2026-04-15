@@ -22,24 +22,28 @@ ch2Cnt:			.short 0
 ch3Frq:			.short 0
 ch3Cnt:			.short 0
 
-currentBits:	.long 0
-
 rng:			.long 0
+currentBits:	.long 0
 noiseFB:		.long 0
 
 snAttChg:		.byte 0
-snPadding:		.space 3
+ch3Reg:			.byte 0
+snPadding:		.skip 2
 
 calculatedVolumes:	.space 16*2
 
-ch0Reg:			.short 0
-ch0Att:			.short 0
-ch1Reg:			.short 0
-ch1Att:			.short 0
-ch2Reg:			.short 0
-ch2Att:			.short 0
-ch3Reg:			.short 0
-ch3Att:			.short 0
+ch0Volume:		.short 0
+				.skip 1
+ch0Att:			.byte 0
+ch1Volume:		.short 0
+				.skip 1
+ch1Att:			.byte 0
+ch2Volume:		.short 0
+				.skip 1
+ch2Att:			.byte 0
+ch3Volume:		.short 0
+				.skip 1
+ch3Att:			.byte 0
 
 snLastReg:		.long 0
 

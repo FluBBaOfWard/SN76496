@@ -1,6 +1,6 @@
 # SN76496 V1.6.8
 
-SN76496/SN76489, NCR8496 & SMS/GG/MD sound chip emulator for ARM32.
+SN76496/SN76489, SMS/GG/MD & NCR8496 sound chip emulator for ARM32.
 
 First alloc chip struct, call sn76496Reset with chip type & struct.
 Call sn76496Mixer with length, destination and chip struct.

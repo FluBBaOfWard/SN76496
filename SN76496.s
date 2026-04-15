@@ -50,15 +50,15 @@
 ;@----------------------------------------------------------------------------
 ;@ r0 = Mix length.
 ;@ r1 = Mixerbuffer.
-;@ r2 = snptr.
+;@ r2 = sn76496ptr.
 ;@ r3 -> r6 = pos+freq.
-;@ r7 = currentBits + offset to calculated volumes.
-;@ r8 = Noise generator.
+;@ r7 = Noise generator.
+;@ r8 = currentBits + offset to calculated volumes.
 ;@ r9 = Noise feedback.
 ;@ r12 = scrap
 ;@ lr = Mixer reg.
 ;@----------------------------------------------------------------------------
-sn76496Mixer:				;@ r0=len, r1=dest, r2=snptr
+sn76496Mixer:				;@ In r0=len, r1=dest, r2=sn76496ptr
 	.type   sn76496Mixer STT_FUNC
 ;@----------------------------------------------------------------------------
 	stmfd sp!,{r4-r9,lr}
@@ -73,30 +73,30 @@ innerMixLoop:
 #endif
 	adds r3,r3,#SN_ADDITION
 	subcs r3,r3,r3,lsl#16
-	eorcs r7,r7,#0x02
+	eorcs r8,r8,#0x02
 
 	adds r4,r4,#SN_ADDITION
 	subcs r4,r4,r4,lsl#16
-	eorcs r7,r7,#0x04
+	eorcs r8,r8,#0x04
 
 	adds r5,r5,#SN_ADDITION
 	subcs r5,r5,r5,lsl#16
-	eorcs r7,r7,#0x08
+	eorcs r8,r8,#0x08
 
 	adds r6,r6,#SN_ADDITION		;@ 0x00200000?
 	subcs r6,r6,r6,lsl#16
-	biccs r7,r7,#0x10
-	movscs r8,r8,lsr#1
-	eorcs r8,r8,r9
-	orrcs r7,r7,#0x10
+	biccs r8,r8,#0x10
+	movscs r7,r7,lsr#1
+	eorcs r7,r7,r9
+	orrcs r8,r8,#0x10
 
 #ifdef SN_UPSHIFT
-	ldrh r12,[r2,r7]
+	ldrh r12,[r2,r8]
 	adds r0,r0,#0x100000000>>USHIFT
 	add lr,lr,r12
 	bcc innerMixLoop
 #else
-	ldrh lr,[r2,r7]
+	ldrh lr,[r2,r8]
 #endif
 	subs r0,r0,#1
 	strhpl lr,[r1],#2
@@ -110,7 +110,7 @@ innerMixLoop:
 	.section .text
 	.align 2
 ;@----------------------------------------------------------------------------
-sn76496Reset:				;@ r0 = chiptype SMS/SN76496, snptr=r1=pointer to struct
+sn76496Reset:				;@ r0=chiptype SMS/SN76496, r1=sn76496ptr
 	.type   sn76496Reset STT_FUNC
 ;@----------------------------------------------------------------------------
 
@@ -138,7 +138,7 @@ rLoop:
 	bx lr
 
 ;@----------------------------------------------------------------------------
-sn76496SaveState:			;@ In r0=destination, r1=snptr. Out r0=state size.
+sn76496SaveState:			;@ In r0=dest, r1=sn76496ptr. Out r0=state size.
 	.type   sn76496SaveState STT_FUNC
 ;@----------------------------------------------------------------------------
 	mov r2,#snStateEnd
@@ -149,7 +149,7 @@ sn76496SaveState:			;@ In r0=destination, r1=snptr. Out r0=state size.
 	ldmfd sp!,{r0,lr}
 	bx lr
 ;@----------------------------------------------------------------------------
-sn76496LoadState:			;@ In r0=snptr, r1=source. Out r0=state size.
+sn76496LoadState:			;@ In r0=sn76496ptr, r1=source. Out r0=state size.
 	.type   sn76496LoadState STT_FUNC
 ;@----------------------------------------------------------------------------
 	stmfd sp!,{r0,lr}
@@ -167,7 +167,7 @@ sn76496GetStateSize:		;@ Out r0=state size.
 	bx lr
 
 ;@----------------------------------------------------------------------------
-sn76496W:					;@ r0 = value, r1 = struct-pointer
+sn76496W:					;@ r0=value, r1=sn76496ptr
 	.type   sn76496W STT_FUNC
 ;@----------------------------------------------------------------------------
 	movs r12,r0,lsl#25
@@ -194,7 +194,7 @@ setFreq:
 	orrne r0,r0,r1,lsr#10
 	andeq r0,r0,#0x3F
 	orreq r0,r0,r1,lsl#22
-	mov r0,r0,ror#32-10
+	mov r0,r0,ror#22
 	cmp r0,#0x0180				;@ We set any value under 6 to 1 to fix aliasing.
 	movmi r0,#0x0040			;@ Value zero is same as 1 on SMS.
 	strh r0,[r2,#ch0Frq]
@@ -223,15 +223,13 @@ calculateVolumes:
 ;@----------------------------------------------------------------------------
 	stmfd sp!,{r0,r1,r3-r6,lr}
 
-	ldrb r3,[r2,#ch0Att]
-	ldrb r4,[r2,#ch1Att]
-	ldrb r5,[r2,#ch2Att]
-	ldrb r6,[r2,#ch3Att]
+	add r1,r2,#ch0Volume
+	ldmia r1,{r3-r6}
 	adr r1,attenuation
-	ldr r3,[r1,r3,lsl#2]
-	ldr r4,[r1,r4,lsl#2]
-	ldr r5,[r1,r5,lsl#2]
-	ldr r6,[r1,r6,lsl#2]
+	ldr r3,[r1,r3,lsr#22]
+	ldr r4,[r1,r4,lsr#22]
+	ldr r5,[r1,r5,lsr#22]
+	ldr r6,[r1,r6,lsr#22]
 
 	mov lr,#ZERO_VOL
 	add r12,r2,#calculatedVolumes
