@@ -42,7 +42,7 @@
 #endif
 	.align 2
 ;@----------------------------------------------------------------------------
-;@ r0 = snptr.
+;@ r0 = sn76496ptr.
 ;@ r1 = Mixerbuffer.
 ;@ r2 = Mix length.
 ;@ r3 -> r6 = pos+freq.
@@ -52,7 +52,7 @@
 ;@ r10 = Ch2/3 volumes.
 ;@ lr = Mixer reg.
 ;@----------------------------------------------------------------------------
-sn76496Mixer:				;@ r0=snptr, r1=dest, r2=len
+sn76496Mixer:				;@ In r0=sn76496ptr, r1=dest, r2=len
 ;@----------------------------------------------------------------------------
 	stmfd sp!,{r4-r11,lr}
 	ldmia snptr,{r3-r10}		;@ Load freq,addr,rng, noisefb,vol0, vol1
@@ -87,13 +87,13 @@ mixLoop:
 	.section .text
 	.align 2
 ;@----------------------------------------------------------------------------
-sn76496Init:				;@ snptr=r0=pointer to struct, r1=FREQTABLE
+sn76496Init:				;@ In r0=sn76496ptr, r1=FREQTABLE
 ;@----------------------------------------------------------------------------
 	stmfd sp!,{snptr,lr}
 	bl frequencyCalculate
 	ldmfd sp!,{snptr,lr}
 ;@----------------------------------------------------------------------------
-sn76496Reset:				;@ snptr=r0=pointer to struct, r1 = chiptype SMS/SN76496
+sn76496Reset:				;@ In r0=sn76496ptr, r1=chiptype SMS/SN76496
 ;@----------------------------------------------------------------------------
 	cmp r1,#1
 	ldr r3,=(WFEED_SMS<<16)+PFEED_SMS
@@ -106,6 +106,7 @@ rLoop:
 	subs r2,r2,#1
 	strpl r1,[snptr,r2,lsl#2]
 	bhi rLoop
+
 	str r3,[snptr,#noiseType]
 	strh r3,[snptr,#rng]
 	mov r3,r3,lsr#16
@@ -113,12 +114,11 @@ rLoop:
 
 	bx lr
 
-#define STATE_SIZE (snStateEnd)
 ;@----------------------------------------------------------------------------
-sn76496SaveState:			;@ In r0=destination, r1=snptr. Out r0=state size.
+sn76496SaveState:			;@ In r0=dest, r1=sn76496ptr. Out r0=state size.
 	.type   sn76496SaveState STT_FUNC
 ;@----------------------------------------------------------------------------
-	mov r2,#STATE_SIZE
+	mov r2,#snStateEnd
 	stmfd sp!,{r2,lr}
 
 	bl memcpy
@@ -126,12 +126,12 @@ sn76496SaveState:			;@ In r0=destination, r1=snptr. Out r0=state size.
 	ldmfd sp!,{r0,lr}
 	bx lr
 ;@----------------------------------------------------------------------------
-sn76496LoadState:			;@ In r0=snptr, r1=source. Out r0=state size.
+sn76496LoadState:			;@ In r0=sn76496ptr, r1=source. Out r0=state size.
 	.type   sn76496LoadState STT_FUNC
 ;@----------------------------------------------------------------------------
 	stmfd sp!,{lr}
 
-	mov r2,#STATE_SIZE
+	mov r2,#snStateEnd
 	bl memcpy
 
 	ldmfd sp!,{lr}
@@ -139,10 +139,10 @@ sn76496LoadState:			;@ In r0=snptr, r1=source. Out r0=state size.
 sn76496GetStateSize:		;@ Out r0=state size.
 	.type   sn76496GetStateSize STT_FUNC
 ;@----------------------------------------------------------------------------
-	mov r0,#STATE_SIZE
+	mov r0,#snStateEnd
 	bx lr
 ;@----------------------------------------------------------------------------
-sn76496SetMixrate:		;@ snptr=r0=pointer to struct, r1 in 0 = low, 1 = high
+sn76496SetMixrate:			;@ In r0=sn76496ptr, r1 in 0 = low, 1 = high
 ;@----------------------------------------------------------------------------
 	cmp r1,#0
 	moveq r1,#924				;@ low,  18157Hz
@@ -150,7 +150,7 @@ sn76496SetMixrate:		;@ snptr=r0=pointer to struct, r1 in 0 = low, 1 = high
 	str r1,[snptr,#mixRate]
 	bx lr
 ;@----------------------------------------------------------------------------
-sn76496SetFrequency:		;@ snptr=r0=pointer to struct, r1=frequency of chip.
+sn76496SetFrequency:		;@ In r0=sn76496ptr, r1=frequency of chip.
 ;@----------------------------------------------------------------------------
 	ldr r2,[snptr,#mixRate]
 	mul r1,r2,r1
@@ -158,7 +158,7 @@ sn76496SetFrequency:		;@ snptr=r0=pointer to struct, r1=frequency of chip.
 	str r1,[snptr,#freqConv]	;@ Frequency conversion (SN76496freq*mixrate)/4096
 	bx lr
 ;@----------------------------------------------------------------------------
-frequencyCalculate:		;@ snptr=r0=pointer to struct, r1=FREQTABLE
+frequencyCalculate:			;@ In r0=sn76496ptr, r1=FREQTABLE
 ;@----------------------------------------------------------------------------
 	stmfd sp!,{r4-r6,lr}
 	str r1,[snptr,#freqTablePtr]
@@ -182,61 +182,61 @@ frqLoop:
 	.section .ewram, "ax", %progbits
 	.align 2
 ;@----------------------------------------------------------------------------
-sn76496W:					;@ snptr = r0 = struct-pointer, r1 = value
+sn76496W:					;@ In r0 = value, r1 = sn76496ptr
+	.type   sn76496W STT_FUNC
 ;@----------------------------------------------------------------------------
-	tst r1,#0x80
-	andne r2,r1,#0x70
-	strbne r2,[snptr,#snLastReg]
-	ldrbeq r2,[snptr,#snLastReg]
-	movs r2,r2,lsr#5
+	movs r12,r0,lsl#25
+	ldrcc r12,[r1,#snLastReg]
+	strcs r12,[r1,#snLastReg]
+	movs r12,r12,lsr#30
 	bcc setFreq
 doVolume:
-	and r1,r1,#0x0F
-	adr r3,attenuation			;@ This might be possible to optimise.
-	add r3,r3,r1
-	ldrh r1,[r3,r1]
-	add r3,snptr,r2,lsl#1
-	strh r1,[r3,#ch0Volume]
+	and r0,r0,#0x0F
+	adr r2,attenuation			;@ This might be possible to optimise.
+	add r2,r2,r0
+	ldrh r0,[r2,r0]
+	add r2,r1,r12,lsl#1
+	strh r0,[r2,#ch0Volume]
 	bx lr
 
 setFreq:
-	cmp r2,#3					;@ Noise channel
-	beq setNoiseF
-	tst r1,#0x80
-	add r3,snptr,r2,lsl#2
-	andeq r1,r1,#0x3F
-	movne r1,r1,lsl#4
-	strbeq r1,[r3,#ch0Reg+1]
-	strbne r1,[r3,#ch0Reg]
-	ldrh r1,[r3,#ch0Reg]
-	mov r1,r1,lsr#3
+	cmp r12,#2					;@ Check channel 2/3
+	bhi setNoiseFreq			;@ Noise channel
+	add r2,r1,r12,lsl#2
+	ldrbeq r12,[r1,#ch3Reg]		;@ cache Ch3 reg
+	tst r0,#0x80
+	andeq r0,r0,#0x3F
+	movne r0,r0,lsl#4
+	strbeq r0,[r2,#ch0Reg+1]
+	strbne r0,[r2,#ch0Reg]
+	ldrh r0,[r2,#ch0Reg]
+	mov r0,r0,lsr#3
 
-	ldr r12,[snptr,#freqTablePtr]
-	ldrh r1,[r12,r1]
-	strh r1,[r3,#ch0Frq]
-	cmp r2,#2					;@ Ch2
-	ldreq r3,[snptr,#ch3Reg]
-	cmpeq r3,#3
-	strheq r1,[snptr,#ch3Frq]
+	ldr r1,[r1,#freqTablePtr]
+	ldrh r0,[r1,r0]
+	strh r0,[r2,#ch0Frq]
+
+	cmp r12,#3
+	strheq r0,[r2,#ch0Frq+4]	;@ This means Ch3Frq
 	bx lr
 
-setNoiseF:
-	and r2,r1,#3
-	str r2,[snptr,#ch3Reg]
-	tst r1,#4
-	ldr r1,[snptr,#noiseType]	;@ Periodic noise
-	strh r1,[snptr,#rng]
-	movne r1,r1,lsr#16			;@ White noise
-	strh r1,[snptr,#noiseFB]
-	ldr r1,[snptr,#freqConv]
-	mov r1,r1,lsr#5				;@ These values sound ok
-	mov r1,r1,lsr r2
+setNoiseFreq:
+	and r2,r0,#3
+	str r2,[r1,#ch3Reg]
+	tst r0,#4
+	ldr r0,[r1,#noiseType]
+	strh r0,[r1,#rng]
+	movne r0,r0,lsr#16			;@ White noise
+	strh r0,[r1,#noiseFB]
 	cmp r2,#3
-	ldrheq r1,[snptr,#ch2Frq]
-	strh r1,[snptr,#ch3Frq]
+	ldrne r0,[r1,#freqConv]
+	ldrheq r0,[r1,#ch2Frq]
+	movne r0,r0,lsr#5			;@ These values sound ok
+	movne r0,r0,lsr r2
+	strh r0,[r1,#ch3Frq]
 	bx lr
 
-attenuation:
+attenuation:				;@ each step * 0.79370053 (-1dB?)
 	.hword 0x3FFF,0x32CB,0x2851,0x2000,0x1966,0x1428,0x1000,0x0CB3,0x0A14,0x0800,0x0659,0x050A,0x0400,0x032C,0x0285,0x0000
 ;@----------------------------------------------------------------------------
 	.end

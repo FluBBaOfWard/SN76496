@@ -36,8 +36,7 @@ ch0Reg:			.long 0
 ch1Reg:			.long 0
 ch2Reg:			.long 0
 ch3Reg:			.long 0
-snLastReg:		.byte 0
-snPadding:		.skip 3
+snLastReg:		.long 0
 
 snStateEnd:
 noiseType:		.long 0

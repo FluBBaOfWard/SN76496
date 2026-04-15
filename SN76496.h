@@ -35,14 +35,16 @@ typedef struct {
 	u32 ch2Reg;
 	u32 ch3Reg;
 
-	u8 snLastReg;
-	u8 snPadding[3];
+	u32 snLastReg;
 
 	u32 noiseType;
 	u32 mixRate;
 	u32 freqConv;
 	u16 *freqTablePtr;
 } SN76496;
+
+void sn76496SetMixrate(SN76496 *chip, int);
+void sn76496SetFrequency(SN76496 *chip, int);
 
 void sn76496Init(SN76496 *chip, u16 *freqtableptr);
 
@@ -75,9 +77,6 @@ int sn76496LoadState(SN76496 *chip, const void *source);
  */
 int sn76496GetStateSize(void);
 
-void sn76496SetMixrate(SN76496 *chip, int);
-void sn76496SetFrequency(SN76496 *chip, int);
-
 /**
  * Render len number of samples.
  * @param  *chip: The SN76496 chip.
@@ -91,7 +90,7 @@ void sn76496Mixer(SN76496 *chip, char *dest, int length);
  * @param  *chip: The SN76496 chip.
  * @param  value: value to write.
  */
-void sn76496W(SN76496 *chip, u8 value);
+void sn76496W(u8 value, SN76496 *chip);
 
 #ifdef __cplusplus
 }

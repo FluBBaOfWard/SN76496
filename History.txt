@@ -2,9 +2,10 @@ SN76496 revision history
 -=-=-=-=-=-=-=-=-=-=-=-=-
 
 
-V1.6.7 - 2026-04-12 (FluBBa)
-	Removed unused variables.
+V1.6.7 - 2026-04-15 (FluBBa)
 	Fixed noise startup values.
+	Tiny optimization to register writes.
+	Removed unused variables.
 
 V1.6.5 - 2022-08-23 (FluBBa)
 	Added load/save state.
