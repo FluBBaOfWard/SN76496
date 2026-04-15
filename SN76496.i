@@ -27,23 +27,24 @@ currentBits:	.long 0
 noiseFB:		.long 0
 
 snAttChg:		.byte 0
+ch3Reg:			.byte 0
 ggStereo:		.byte 0
-snPadding:		.space 2
+snPadding:		.skip 1
 
-ch0Reg:			.short 0
-ch0Att:			.short 0
-ch1Reg:			.short 0
-ch1Att:			.short 0
-ch2Reg:			.short 0
-ch2Att:			.short 0
-ch3Reg:			.short 0
-ch3Att:			.short 0
+snPadding0:		.skip 3
+ch0Att:			.byte 0
+snPadding1:		.skip 3
+ch1Att:			.byte 0
+snPadding2:		.skip 3
+ch2Att:			.byte 0
+snPadding3:		.skip 3
+ch3Att:			.byte 0
 
 snLastReg:		.long 0
 
 snStateEnd:
 noiseType:		.long 0
-snPadding2:		.space 2*4
+snPadding4:		.skip 2*4
 calculatedVolumes:	.space 16*2*2
 
 snSize:

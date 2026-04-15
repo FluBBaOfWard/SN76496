@@ -22,27 +22,28 @@ typedef struct {
 	u16 ch3Frq;
 	u16 ch3Cnt;
 
-	u32 currentBits;
-
 	u32 rng;
+	u32 currentBits;
 	u32 noiseFB;
 
-	u8 snAttChg;
-	u8 snLastReg;
+	u8 attChg;
+	u8 ch3Reg;
 	u8 ggStereo;
-	u8 snPadding[1];
+	u8 padding[1];
 
-	u16 ch0Reg;
-	u16 ch0Att;
-	u16 ch1Reg;
-	u16 ch1Att;
-	u16 ch2Reg;
-	u16 ch2Att;
-	u16 ch3Reg;
-	u16 ch3Att;
+	u8 padding0[3];
+	u8 ch0Att;
+	u8 padding1[3];
+	u8 ch1Att;
+	u8 padding2[3];
+	u8 ch2Att;
+	u8 padding3[3];
+	u8 ch3Att;
+
+	u32 lastReg;
 
 	u32 noiseType;
-	u32 snPadding2[3];
+	u32 padding4[3];
 	s16 calculatedVolumes[16*2];
 } SN76496;
 

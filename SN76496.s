@@ -47,7 +47,7 @@
 ;@----------------------------------------------------------------------------
 ;@ r0  = Mix length.
 ;@ r1  = Mixerbuffer.
-;@ r2  = snptr.
+;@ r2  = sn76496ptr.
 ;@ r3 -> r6 = pos+freq.
 ;@ r7  = Noise generator.
 ;@ r8  = CurrentBits.
@@ -55,7 +55,7 @@
 ;@ r12 = Scrap.
 ;@ lr  = Mixer reg.
 ;@----------------------------------------------------------------------------
-sn76496Mixer:				;@ In r0=len, r1=dest, r2=snptr
+sn76496Mixer:				;@ In r0=len, r1=dest, r2=sn76496ptr
 	.type   sn76496Mixer STT_FUNC
 ;@----------------------------------------------------------------------------
 	stmfd sp!,{r4-r9,lr}
@@ -102,7 +102,7 @@ innerMixLoop:
 	.section .text
 	.align 2
 ;@----------------------------------------------------------------------------
-sn76496Reset:				;@ In r0 = chiptype SMS/SN76496, snptr=r1=pointer to struct
+sn76496Reset:				;@ In r0=chiptype SMS/SN76496, r1=sn76496ptr
 	.type   sn76496Reset STT_FUNC
 ;@----------------------------------------------------------------------------
 	cmp r0,#1
@@ -130,7 +130,7 @@ rLoop:
 	bx lr
 
 ;@----------------------------------------------------------------------------
-sn76496SaveState:			;@ In r0=destination, r1=snptr. Out r0=state size.
+sn76496SaveState:			;@ In r0=destination, r1=sn76496ptr. Out r0=state size.
 	.type   sn76496SaveState STT_FUNC
 ;@----------------------------------------------------------------------------
 	mov r2,#snStateEnd
@@ -141,7 +141,7 @@ sn76496SaveState:			;@ In r0=destination, r1=snptr. Out r0=state size.
 	ldmfd sp!,{r0,lr}
 	bx lr
 ;@----------------------------------------------------------------------------
-sn76496LoadState:			;@ In r0=snptr, r1=source. Out r0=state size.
+sn76496LoadState:			;@ In r0=sn76496ptr, r1=source. Out r0=state size.
 	.type   sn76496LoadState STT_FUNC
 ;@----------------------------------------------------------------------------
 	stmfd sp!,{r0,lr}
@@ -160,7 +160,7 @@ sn76496GetStateSize:		;@ Out r0=state size.
 	bx lr
 
 ;@----------------------------------------------------------------------------
-sn76496W:					;@ r0 = value, r1 = struct-pointer
+sn76496W:					;@ In r0=value, r1=sn76496ptr
 	.type   sn76496W STT_FUNC
 ;@----------------------------------------------------------------------------
 	movs r12,r0,lsl#25
@@ -180,7 +180,7 @@ doVolume:
 setFreq:
 	cmp r12,#2					;@ Check channel 2/3
 	bhi setNoiseFreq			;@ Noise channel
-	ldrbeq r12,[r1,#ch3Reg]		;@ cache Ch3 reg
+	ldrbeq r12,[r1,#ch3Reg]		;@ Cache Ch3 reg
 	tst r0,#0x80
 	ldrh r1,[r2,#ch0Frq]
 	movne r0,r0,lsl#28
@@ -212,7 +212,7 @@ setNoiseFreq:
 	bx lr
 
 ;@----------------------------------------------------------------------------
-sn76496GGW:					;@ In r0 = value, r1 = struct-pointer
+sn76496GGW:					;@ In r0=value, r1=sn76496ptr
 	.type   sn76496GGW STT_FUNC
 ;@----------------------------------------------------------------------------
 	ldrb r2,[r1,#ggStereo]
@@ -222,19 +222,17 @@ sn76496GGW:					;@ In r0 = value, r1 = struct-pointer
 	bx lr
 
 ;@----------------------------------------------------------------------------
-calculateVolumes:			;@ r2 = snptr
+calculateVolumes:			;@ In r2=sn76496ptr
 ;@----------------------------------------------------------------------------
 	stmfd sp!,{r0,r1,r3-r6}
 
-	ldrb r3,[r2,#ch0Att]
-	ldrb r4,[r2,#ch1Att]
-	ldrb r5,[r2,#ch2Att]
-	ldrb r6,[r2,#ch3Att]
+	add r1,r2,#ch0Vol
+	ldmia r1,{r3-r6}
 	adr r1,attenuation1_4
-	ldr r3,[r1,r3,lsl#2]
-	ldr r4,[r1,r4,lsl#2]
-	ldr r5,[r1,r5,lsl#2]
-	ldr r6,[r1,r6,lsl#2]
+	ldr r3,[r1,r3,lsr#22]
+	ldr r4,[r1,r4,lsr#22]
+	ldr r5,[r1,r5,lsr#22]
+	ldr r6,[r1,r6,lsr#22]
 
 	ldrb r0,[r2,#ggStereo]
 	mov r1,#-1

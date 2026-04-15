@@ -2,8 +2,9 @@ SN76496 revision history
 -=-=-=-=-=-=-=-=-=-=-=-=-
 
 
-V1.6.8 - 2026-04-12 (FluBBa)
+V1.6.8 - 2026-04-15 (FluBBa)
 	Tiny optimization to register writes.
+	Tiny optimization to calculate volume.
 
 V1.6.7 - 2026-01-08 (FluBBa)
 	Tiny optimization to mixer.
