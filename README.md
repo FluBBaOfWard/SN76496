@@ -1,6 +1,6 @@
 # SN76496 V1.6.7
 
-SN76496/SN76489, NCR8496 & SMS/GG/MD sound chip emulator for ARM32.
+SN76496/SN76489, SMS/GG/MD & NCR8496 sound chip emulator for ARM32.
 
 This is highly specialised for the GBA but can probably be tweaked
 quite easily to support other platforms as well.
@@ -13,12 +13,11 @@ Then call sn76496SetFrequency with the actual clock rate of the chip.
 Finally call sn76496Init to set it up.
 
 Call sn76496Mixer with chip struct, length and destination.
-Produces 8bit signed mono.
+Produces 8bit signed stereo.
 
 ## Projects that use this code
 
-* <https://github.com/FluBBaOfWard/GreenBeretGBA>
-* <https://github.com/FluBBaOfWard/YieArGBA>
+* <https://github.com/FluBBaOfWard/S8GBA>
 
 ## Credits
 

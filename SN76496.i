@@ -9,8 +9,6 @@
 	#error This header file is only for use in assembly files!
 #endif
 
-	snptr			.req r0
-
 							;@ SN76496.s
 	.struct 0
 snStateStart:
@@ -27,15 +25,24 @@ ch3Cnt:			.short 0
 rng:			.long 0
 noiseFB:		.long 0
 
-ch0Volume:		.short 0
-ch1Volume:		.short 0
-ch2Volume:		.short 0
-ch3Volume:		.short 0
+snAttChg:		.byte 0
+ch_Reg:			.byte 0
+ggStereo:		.byte 0
+snPadding:		.skip 1
 
-ch0Reg:			.long 0
-ch1Reg:			.long 0
-ch2Reg:			.long 0
-ch3Reg:			.long 0
+ch0Reg:			.short 0
+snPadding0:		.skip 1
+ch0Att:			.byte 0
+ch1Reg:			.short 0
+snPadding1:		.skip 1
+ch1Att:			.byte 0
+ch2Reg:			.short 0
+snPadding2:		.skip 1
+ch2Att:			.byte 0
+ch3Reg:			.short 0
+snPadding3:		.skip 1
+ch3Att:			.byte 0
+
 snLastReg:		.long 0
 
 snStateEnd:
@@ -43,6 +50,8 @@ noiseType:		.long 0
 mixRate:		.long 0
 freqConv:		.long 0
 freqTablePtr:	.long 0
+
+calculatedVolumes:	.space 16*2*2
 
 snSize:
 

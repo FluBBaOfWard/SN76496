@@ -43,17 +43,17 @@ typedef struct {
 	u16 *freqTablePtr;
 } SN76496;
 
-void sn76496SetMixrate(SN76496 *chip, int);
-void sn76496SetFrequency(SN76496 *chip, int);
+void sn76496SetMixrate(SN76496 *chip, int rate);
+void sn76496SetFrequency(SN76496 *chip, int freq);
 
 void sn76496Init(SN76496 *chip, u16 *freqtableptr);
 
 /**
  * Reset SN76496 chip.
+ * @param  chipType: selects version of chip, 0=SN76496, 1=SMS/GG VDP version, 2=NCR 8496.
  * @param  *chip: The SN76496 chip.
- * @param  chipType: selects version of chip, 0=SMS/GG VDP version, 1=SN76496, 2=NCR 8496.
  */
-void sn76496Reset(SN76496 *chip, int chipType);
+void sn76496Reset(int chipType, SN76496 *chip);
 
 /**
  * Saves the state of the SN76496 chip to the destination.
@@ -79,11 +79,11 @@ int sn76496GetStateSize(void);
 
 /**
  * Render len number of samples.
- * @param  *chip: The SN76496 chip.
  * @param  *dest: Pointer to buffer where sound is rendered.
  * @param  *len: Number of samples to render.
+ * @param  *chip: The SN76496 chip.
  */
-void sn76496Mixer(SN76496 *chip, char *dest, int length);
+void sn76496Mixer(char *dest, int length, SN76496 *chip);
 
 /**
  * Write value to SN76496 chip
