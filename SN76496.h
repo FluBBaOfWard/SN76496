@@ -2,8 +2,8 @@
 //  SN76496.h
 //  SN76496/SMS sound chip emulator for arm32.
 //
-//  Created by Fredrik Ahlström on 2009-08-25.
-//  Copyright © 2009-2026 Fredrik Ahlström. All rights reserved.
+//  Created by Fredrik Ahlström on 2005-07-11.
+//  Copyright © 2005-2026 Fredrik Ahlström. All rights reserved.
 //
 #ifndef SN76496_HEADER
 #define SN76496_HEADER
@@ -25,22 +25,30 @@ typedef struct {
 	u32 rng;
 	u32 noiseFB;
 
-	u16 ch0Volume;
-	u16 ch1Volume;
-	u16 ch2Volume;
-	u16 ch3Volume;
+	u8 attChg;
+	u8 ggStereo;
+	u8 padding[2];
 
 	u32 ch0Reg;
 	u32 ch1Reg;
 	u32 ch2Reg;
 	u32 ch3Reg;
+#ifdef SN_NGP
+	u32 ch0RegL;
+	u32 ch1RegL;
+	u32 ch2RegL;
+	u32 ch3RegL;
 
+	u32 snLastRegL;
+#endif
 	u32 snLastReg;
 
 	u32 noiseType;
 	u32 mixRate;
 	u32 freqConv;
 	u16 *freqTablePtr;
+	u16 calculatedVolumes[16*2]
+
 } SN76496;
 
 void sn76496SetMixrate(SN76496 *chip, int rate);
@@ -91,6 +99,13 @@ void sn76496Mixer(char *dest, int length, SN76496 *chip);
  * @param  value: value to write.
  */
 void sn76496W(u8 value, SN76496 *chip);
+
+/**
+ * Write value to SN76496 chip, left side
+ * @param  *chip: The SN76496 chip.
+ * @param  value: value to write.
+ */
+void sn76496LW(u8 value, SN76496 *chip);
 
 #ifdef __cplusplus
 }

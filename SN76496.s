@@ -1,9 +1,9 @@
 ;@
 ;@  SN76496.s
-;@  SN76496/SMS sound chip emulator for arm32.
+;@  SN76496/SMS/GG/MD/NGP sound chip emulator for arm32.
 ;@
-;@  Created by Fredrik Ahlström on 2009-08-25.
-;@  Copyright © 2009-2026 Fredrik Ahlström. All rights reserved.
+;@  Created by Fredrik Ahlström on 2005-07-11.
+;@  Copyright © 2005-2026 Fredrik Ahlström. All rights reserved.
 ;@
 #ifdef __arm__
 
@@ -20,18 +20,19 @@
 	.global sn76496SetFrequency
 	.global sn76496Mixer
 	.global sn76496W
+	.global sn76496LW
 	.global sn76496GGW
-								;@ These values are for the SMS/GG/MD vdp/sound chip.
-.equ PFEED_SMS,	0x8000			;@ Periodic Noise Feedback
-.equ WFEED_SMS,	0x9000			;@ White Noise Feedback
+									;@ These values are for the SN76489/SN76496 sound chip.
+	.equ PFEED_SN,	0x4000			;@ Periodic Noise Feedback
+	.equ WFEED_SN,	0x6000			;@ White Noise Feedback
 
-								;@ These values are for the SN76489/SN76496 sound chip.
-.equ PFEED_SN,	0x4000			;@ Periodic Noise Feedback
-.equ WFEED_SN,	0x6000			;@ White Noise Feedback
+									;@ These values are for the SMS/GG/MD vdp/sound chip.
+	.equ PFEED_SMS,	0x8000			;@ Periodic Noise Feedback
+	.equ WFEED_SMS,	0x9000			;@ White Noise Feedback
 
-								;@ These values are for the NCR 8496 sound chip.
-.equ PFEED_NCR,	0x4000			;@ Periodic Noise Feedback
-.equ WFEED_NCR,	0x4400			;@ White Noise Feedback
+									;@ These values are for the NCR 8496 sound chip.
+	.equ PFEED_NCR,	0x4000			;@ Periodic Noise Feedback
+	.equ WFEED_NCR,	0x4400			;@ White Noise Feedback
 
 	.syntax unified
 	.arm
@@ -57,7 +58,7 @@ sn76496Mixer:				;@ In r0=dest, r1=len, r2=sn76496ptr
 	.type   sn76496Mixer STT_FUNC
 ;@----------------------------------------------------------------------------
 	stmfd sp!,{r4-r9,lr}
-	ldmia r2,{r3-r8,lr}		;@ Load freq,addr,rng,noiseFB,attChg
+	ldmia r2,{r3-r8,lr}			;@ Load freq,addr,rng,noiseFB,attChg
 	tst lr,#0xff
 	blne calculateVolumes
 	add r9,r2,#calculatedVolumes
@@ -194,6 +195,7 @@ frqLoop:
 ;@----------------------------------------------------------------------------
 	.section .ewram, "ax", %progbits
 	.align 2
+#ifndef SN_NGP
 ;@----------------------------------------------------------------------------
 sn76496W:					;@ In r0 = value, r1 = sn76496ptr
 	.type   sn76496W STT_FUNC
@@ -308,5 +310,152 @@ attenuation:				;@ each step * 0.79370053 (-1dB?)
 	.long 0x3FFF3FFF,0x32CB32CB,0x28512851,0x20002000,0x19661966,0x14281428,0x10001000,0x0CB30CB3
 	.long 0x0A140A14,0x08000800,0x06590659,0x050A050A,0x04000400,0x032C032C,0x02850285,0x00000000
 ;@----------------------------------------------------------------------------
+#else
+;@----------------------------------------------------------------------------
+sn76496W:					;@ In r0 = value, r1 = struct-pointer, right ch.
+	.type   sn76496W STT_FUNC
+;@----------------------------------------------------------------------------
+	movs r3,r0,lsl#25
+	ldrcc r3,[r1,#snLastReg]
+	strcs r3,[r1,#snLastReg]
+	movs r3,r3,lsr#30
+	add r2,r1,r3,lsl#2
+	bcc setFreq
+doVolume:
+	and r0,r0,#0x0F
+	ldrb r3,[r2,#ch0Att]
+	eors r3,r3,r0
+	strbne r0,[r2,#ch0Att]
+	strbne r3,[r1,#snAttChg]
+	bx lr
+
+setFreq:
+	cmp r3,#2
+	bhi setNoiseFreq
+	bxmi lr
+	tst r0,#0x80
+	andeq r0,r0,#0x3F
+	movne r0,r0,lsl#4
+	strbeq r0,[r2,#ch0Reg+1]
+	strbne r0,[r2,#ch0Reg]
+	ldrh r0,[r2,#ch0Reg]
+	mov r0,r0,lsr#3
+	strh r0,[r1,#ch1Reg]
+
+	ldr r2,[r1,#freqTablePtr]
+	ldrh r0,[r2,r0]
+	ldrb r3,[r1,#ch3Reg]
+	cmpeq r3,#3
+	strheq r0,[r1,#ch3Frq]
+	bx lr
+
+setNoiseFreq:
+	and r2,r0,#3
+	strb r2,[r1,#ch3Reg]
+	tst r0,#4
+	mov r0,#PFEED_SN			;@ Periodic noise
+	strh r0,[r1,#rng]
+	movne r0,#WFEED_SN			;@ White noise
+	strh r0,[r1,#noiseFB]
+	mov r3,#0x0400				;@ These values sound ok
+	mov r3,r3,lsl r2
+	cmp r2,#3
+	ldrheq r3,[r1,#ch1Reg]
+	ldreq r2,[r1,#freqTablePtr]
+	ldrheq r3,[r2,r3]
+	strh r3,[r1,#ch3Frq]
+	bx lr
+;@----------------------------------------------------------------------------
+sn76496LW:					;@ In r0 = value, r1 = struct-pointer, left ch.
+	.type   sn76496LW STT_FUNC
+;@----------------------------------------------------------------------------
+	movs r3,r0,lsl#25
+	ldrcc r3,[r1,#snLastReg]
+	strcs r3,[r1,#snLastReg]
+	movs r3,r3,lsr#30
+	add r2,r1,r3,lsl#2
+	bcc setFreqL
+doVolumeL:
+	and r0,r0,#0x0F
+	ldrb r3,[r2,#ch0AttL]
+	eors r3,r3,r0
+	strbne r0,[r2,#ch0AttL]
+	strbne r3,[r1,#snAttChg]
+	bx lr
+
+setFreqL:
+	cmp r3,#3					;@ Noise channel
+	bxeq lr
+	tst r0,#0x80
+	andeq r0,r0,#0x3F
+	movne r0,r0,lsl#4
+	strbeq r0,[r2,#ch0RegL+1]
+	strbne r0,[r2,#ch0RegL]
+	ldrh r0,[r2,#ch0RegL]
+	mov r0,r0,lsr#3
+	ldr r3,[r1,#freqTablePtr]
+	ldrh r0,[r3,r0]
+	strh r0,[r2,#ch0Frq]
+
+//	cmp r3,#2					;@ Ch2
+//	ldrbeq r2,[r1,#ch3Reg]
+//	cmpeq r2,#3
+//	strheq r0,[r1,#ch3Frq]
+	bx lr
+
+;@----------------------------------------------------------------------------
+calculateVolumes:			;@ In r2 = snptr
+;@----------------------------------------------------------------------------
+	stmfd sp!,{r0,r1,r3-r6,lr}
+
+	adr r1,attenuation
+
+	ldrb r0,[r2,#ch0Att]
+	ldr r3,[r1,r0,lsl#2]
+	ldrb r0,[r2,#ch0AttL]
+	ldr r0,[r1,r0,lsl#2]
+	orr r3,r3,r0,lsl#16
+
+	ldrb r0,[r2,#ch1Att]
+	ldr r4,[r1,r0,lsl#2]
+	ldrb r0,[r2,#ch1AttL]
+	ldr r0,[r1,r0,lsl#2]
+	orr r4,r4,r0,lsl#16
+
+	ldrb r0,[r2,#ch2Att]
+	ldr r5,[r1,r0,lsl#2]
+	ldrb r0,[r2,#ch2AttL]
+	ldr r0,[r1,r0,lsl#2]
+	orr r5,r5,r0,lsl#16
+
+	ldrb r0,[r2,#ch3Att]
+	ldr r6,[r1,r0,lsl#2]
+	ldrb r0,[r2,#ch3AttL]
+	ldr r0,[r1,r0,lsl#2]
+	orr r6,r6,r0,lsl#16
+
+	add r12,r2,#calculatedVolumes
+	ldr lr,=0x00800080
+	mov r1,#15
+volLoop:
+	movs r0,r1,lsl#31
+	movmi r0,r3
+	addcs r0,r0,r4
+	teq r1,r1,lsl#29
+	addmi r0,r0,r5
+	addcs r0,r0,r6
+	add r0,lr,r0,lsr#8
+	str r0,[r12,r1,lsl#2]
+	subs r1,r1,#1
+	bne volLoop
+	strb r1,[r2,#snAttChg]
+	ldmfd sp!,{r0,r1,r3-r6,pc}
+;@----------------------------------------------------------------------------
+attenuation:						;@ each step * 0.79370053 (-1dB?)
+	.long 0x3FFF,0x32CB,0x2851,0x2000,0x1966,0x1428,0x1000,0x0CB3
+	.long 0x0A14,0x0800,0x0659,0x050A,0x0400,0x032C,0x0285,0x0000
+;@----------------------------------------------------------------------------
+#endif
+
 	.end
 #endif // #ifdef __arm__
