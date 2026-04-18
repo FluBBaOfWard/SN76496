@@ -217,7 +217,7 @@ doVolume:
 setFreq:
 	cmp r12,#2					;@ Check channel 2/3
 	bhi setNoiseFreq			;@ Noise channel
-	ldrbeq r12,[r1,#ch3Reg]		;@ cache Ch3 reg
+	ldrbeq r12,[r1,#ch3Reg]		;@ Cache Ch3 reg
 	tst r0,#0x80
 	andeq r0,r0,#0x3F
 	movne r0,r0,lsl#4
@@ -315,24 +315,25 @@ attenuation:				;@ each step * 0.79370053 (-1dB?)
 sn76496W:					;@ In r0 = value, r1 = struct-pointer, right ch.
 	.type   sn76496W STT_FUNC
 ;@----------------------------------------------------------------------------
-	movs r3,r0,lsl#25
-	ldrcc r3,[r1,#snLastReg]
-	strcs r3,[r1,#snLastReg]
-	movs r3,r3,lsr#30
-	add r2,r1,r3,lsl#2
+	movs r12,r0,lsl#25
+	ldrcc r12,[r1,#snLastReg]
+	strcs r12,[r1,#snLastReg]
+	movs r12,r12,lsr#30
+	add r2,r1,r12,lsl#2
 	bcc setFreq
 doVolume:
 	and r0,r0,#0x0F
-	ldrb r3,[r2,#ch0Att]
-	eors r3,r3,r0
+	ldrb r12,[r2,#ch0Att]
+	eors r12,r12,r0
 	strbne r0,[r2,#ch0Att]
-	strbne r3,[r1,#snAttChg]
+	strbne r12,[r1,#snAttChg]
 	bx lr
 
 setFreq:
-	cmp r3,#2
+	cmp r12,#2
 	bhi setNoiseFreq
 	bxmi lr
+	ldrb r12,[r1,#ch3Reg]		;@ Cache Ch3 reg
 	tst r0,#0x80
 	andeq r0,r0,#0x3F
 	movne r0,r0,lsl#4
@@ -344,8 +345,7 @@ setFreq:
 
 	ldr r2,[r1,#freqTablePtr]
 	ldrh r0,[r2,r0]
-	ldrb r3,[r1,#ch3Reg]
-	cmpeq r3,#3
+	cmp r12,#3
 	strheq r0,[r1,#ch3Frq]
 	bx lr
 
@@ -353,38 +353,38 @@ setNoiseFreq:
 	and r2,r0,#3
 	strb r2,[r1,#ch3Reg]
 	tst r0,#4
-	mov r0,#PFEED_SN			;@ Periodic noise
+	ldr r0,[r1,#noiseType]
 	strh r0,[r1,#rng]
-	movne r0,#WFEED_SN			;@ White noise
+	movne r0,r0,lsr#16			;@ White noise
 	strh r0,[r1,#noiseFB]
-	mov r3,#0x0400				;@ These values sound ok
-	mov r3,r3,lsl r2
+	mov r12,#0x0400				;@ These values sound ok
+	mov r12,r12,lsl r2
 	cmp r2,#3
-	ldrheq r3,[r1,#ch1Reg]
+	ldrheq r12,[r1,#ch1Reg]
 	ldreq r2,[r1,#freqTablePtr]
-	ldrheq r3,[r2,r3]
-	strh r3,[r1,#ch3Frq]
+	ldrheq r12,[r2,r12]
+	strh r12,[r1,#ch3Frq]
 	bx lr
 ;@----------------------------------------------------------------------------
 sn76496LW:					;@ In r0 = value, r1 = struct-pointer, left ch.
 	.type   sn76496LW STT_FUNC
 ;@----------------------------------------------------------------------------
-	movs r3,r0,lsl#25
-	ldrcc r3,[r1,#snLastReg]
-	strcs r3,[r1,#snLastReg]
-	movs r3,r3,lsr#30
-	add r2,r1,r3,lsl#2
+	movs r12,r0,lsl#25
+	ldrcc r12,[r1,#snLastRegL]
+	strcs r12,[r1,#snLastRegL]
+	movs r12,r12,lsr#30
+	add r2,r1,r12,lsl#2
 	bcc setFreqL
 doVolumeL:
 	and r0,r0,#0x0F
-	ldrb r3,[r2,#ch0AttL]
-	eors r3,r3,r0
+	ldrb r12,[r2,#ch0AttL]
+	eors r12,r12,r0
 	strbne r0,[r2,#ch0AttL]
-	strbne r3,[r1,#snAttChg]
+	strbne r12,[r1,#snAttChg]
 	bx lr
 
 setFreqL:
-	cmp r3,#3					;@ Noise channel
+	cmp r12,#3					;@ Noise channel
 	bxeq lr
 	tst r0,#0x80
 	andeq r0,r0,#0x3F
@@ -393,11 +393,12 @@ setFreqL:
 	strbne r0,[r2,#ch0RegL]
 	ldrh r0,[r2,#ch0RegL]
 	mov r0,r0,lsr#3
-	ldr r3,[r1,#freqTablePtr]
-	ldrh r0,[r3,r0]
+
+	ldr r12,[r1,#freqTablePtr]
+	ldrh r0,[r12,r0]
 	strh r0,[r2,#ch0Frq]
 
-//	cmp r3,#2					;@ Ch2
+//	cmp r12,#2					;@ Ch2
 //	ldrbeq r2,[r1,#ch3Reg]
 //	cmpeq r2,#3
 //	strheq r0,[r1,#ch3Frq]
@@ -408,28 +409,24 @@ calculateVolumes:			;@ In r2 = snptr
 ;@----------------------------------------------------------------------------
 	stmfd sp!,{r0,r1,r3-r6,lr}
 
+	add r1,r2,#ch0Reg
+	ldmia r1,{r3-r6,r12,lr}
 	adr r1,attenuation
+	ldr r3,[r1,r3,lsr#22]
+	ldr r4,[r1,r4,lsr#22]
+	ldr r5,[r1,r5,lsr#22]
+	ldr r6,[r1,r6,lsr#22]
 
-	ldrb r0,[r2,#ch0Att]
-	ldr r3,[r1,r0,lsl#2]
-	ldrb r0,[r2,#ch0AttL]
-	ldr r0,[r1,r0,lsl#2]
+	ldr r0,[r1,r12,lsr#22]
 	orr r3,r3,r0,lsl#16
 
-	ldrb r0,[r2,#ch1Att]
-	ldr r4,[r1,r0,lsl#2]
-	ldrb r0,[r2,#ch1AttL]
-	ldr r0,[r1,r0,lsl#2]
+	ldr r0,[r1,lr,lsr#22]
 	orr r4,r4,r0,lsl#16
 
-	ldrb r0,[r2,#ch2Att]
-	ldr r5,[r1,r0,lsl#2]
 	ldrb r0,[r2,#ch2AttL]
 	ldr r0,[r1,r0,lsl#2]
 	orr r5,r5,r0,lsl#16
 
-	ldrb r0,[r2,#ch3Att]
-	ldr r6,[r1,r0,lsl#2]
 	ldrb r0,[r2,#ch3AttL]
 	ldr r0,[r1,r0,lsl#2]
 	orr r6,r6,r0,lsl#16
