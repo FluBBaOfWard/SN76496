@@ -160,6 +160,7 @@ sn76496GetStateSize:		;@ Out r0=state size.
 	mov r0,#snStateEnd
 	bx lr
 
+#ifndef SN_NGP
 ;@----------------------------------------------------------------------------
 sn76496W:					;@ In r0=value, r1=sn76496ptr
 	.type   sn76496W STT_FUNC
@@ -274,5 +275,150 @@ attenuation1_4:						;@ each step * 0.79370053 (-1dB?)
 	.long 0x0FFF0FFF,0x0CB30CB3,0x0A140A14,0x08000800,0x06590659,0x050A050A,0x04000400,0x032C032C
 	.long 0x02850285,0x02000200,0x01960196,0x01430143,0x01000100,0x00CB00CB,0x00A100A1,0x00000000
 ;@----------------------------------------------------------------------------
+#else
+;@----------------------------------------------------------------------------
+sn76496W:					;@ In r0=value, r1=sn76496ptr, right ch.
+	.type   sn76496W STT_FUNC
+;@----------------------------------------------------------------------------
+	movs r12,r0,lsl#25
+	ldrcc r12,[r1,#snLastReg]
+	strcs r12,[r1,#snLastReg]
+	movs r12,r12,lsr#30
+	add r2,r1,r12,lsl#2
+	bcc setFreq
+doVolume:
+	and r0,r0,#0x0F
+	ldrb r12,[r2,#ch0Att]
+	eors r12,r12,r0
+	strbne r0,[r2,#ch0Att]
+	strbne r12,[r1,#snAttChg]
+	bx lr
+
+setFreq:
+	cmp r12,#2
+	bhi setNoiseFreq
+	bxmi lr
+	ldrb r12,[r1,#ch3Reg]		;@ Cache Ch3 reg
+	tst r0,#0x80
+	ldrh r2,[r1,#ch2Reg]
+	movne r0,r0,lsl#28
+	andeq r0,r0,#0x3F
+	orrne r0,r0,r2,lsr#10
+	orreq r0,r0,r2,lsl#22
+	mov r0,r0,ror#22
+	cmp r0,#0x0180				;@ We set any value under 6 to 1 to fix aliasing.
+	movmi r0,#0x0040			;@ Value zero is same as 1 on SMS.
+	strh r0,[r1,#ch2Reg]
+
+	cmp r12,#3
+	strheq r0,[r1,#ch3Frq]
+	bx lr
+
+setNoiseFreq:
+	and r2,r0,#3
+	strb r2,[r1,#ch3Reg]
+	tst r0,#4
+	ldr r0,[r1,#noiseType]
+	strh r0,[r1,#rng]
+	movne r0,r0,lsr#16			;@ White noise
+	strh r0,[r1,#noiseFB]
+	cmp r2,#3
+	ldrheq r12,[r1,#ch2Reg]
+	movne r12,#0x0400			;@ These values sound ok
+	movne r12,r12,lsl r2
+	strh r12,[r1,#ch3Frq]
+	bx lr
+
+;@----------------------------------------------------------------------------
+sn76496LW:					;@ In r0 = value, r1 = sn76496ptr, left ch.
+	.type   sn76496LW STT_FUNC
+;@----------------------------------------------------------------------------
+	movs r12,r0,lsl#25
+	ldrcc r12,[r1,#snLastRegL]
+	strcs r12,[r1,#snLastRegL]
+	movs r12,r12,lsr#30
+	add r2,r1,r12,lsl#2
+	bcc setFreqL
+doVolumeL:
+	and r0,r0,#0x0F
+	ldrb r12,[r2,#ch0AttL]
+	eors r12,r12,r0
+	strbne r0,[r2,#ch0AttL]
+	strbne r12,[r1,#snAttChg]
+	bx lr
+
+setFreqL:
+	cmp r12,#3					;@ Noise channel
+	bxeq lr
+	tst r0,#0x80
+	ldrh r1,[r2,#ch0Frq]
+	movne r0,r0,lsl#28
+	andeq r0,r0,#0x3F
+	orrne r0,r0,r1,lsr#10
+	orreq r0,r0,r1,lsl#22
+	mov r0,r0,ror#22
+	cmp r0,#0x0180				;@ We set any value under 6 to 1 to fix aliasing.
+	movmi r0,#0x0040			;@ Value zero is same as 1 on SMS.
+	strh r0,[r2,#ch0Frq]
+
+//	cmp r12,#2					;@ Ch2
+//	ldrbeq r2,[r1,#ch3Reg]
+//	cmpeq r2,#3
+//	strheq r0,[r1,#ch3Frq]
+	bx lr
+
+;@----------------------------------------------------------------------------
+calculateVolumes:			;@ In r2 = snptr
+;@----------------------------------------------------------------------------
+	stmfd sp!,{r0,r1,r3-r6}
+
+	add r1,r2,#snPadding0
+	ldmia r1,{r4-r6,r12}
+	adr r1,attenuation
+
+	ldr r3,[r1,r4,lsr#22]
+	mov r4,r4,lsl#8
+	ldr r0,[r1,r4,lsr#22]
+	orr r3,r3,r0,lsl#16
+
+	ldr r4,[r1,r5,lsr#22]
+	mov r5,r5,lsl#8
+	ldr r0,[r1,r5,lsr#22]
+	orr r4,r4,r0,lsl#16
+
+	ldr r5,[r1,r6,lsr#22]
+	mov r6,r6,lsl#8
+	ldr r0,[r1,r6,lsr#22]
+	orr r5,r5,r0,lsl#16
+
+	ldr r6,[r1,r12,lsr#22]
+	mov r12,r12,lsl#8
+	ldr r0,[r1,r12,lsr#22]
+	orr r6,r6,r0,lsl#16
+
+	add r12,r2,#calculatedVolumes
+	mov r1,#15
+volLoop:
+	movs r0,r1,lsl#31
+	movmi r0,r3
+	addcs r0,r0,r4
+	teq r1,r1,lsl#29
+	addmi r0,r0,r5
+	addcs r0,r0,r6
+	str r0,[r12,r1,lsl#2]
+	subs r1,r1,#1
+	bne volLoop
+
+	strb r1,[r2,#snAttChg]
+	ldmfd sp!,{r0,r1,r3-r6}
+	bx lr
+;@----------------------------------------------------------------------------
+attenuation:						;@ each step * 0.79370053 (-1dB?)
+	.long 0x3FFF>>SN_UPSHIFT,0x32CB>>SN_UPSHIFT,0x2851>>SN_UPSHIFT,0x2000>>SN_UPSHIFT
+	.long 0x1966>>SN_UPSHIFT,0x1428>>SN_UPSHIFT,0x1000>>SN_UPSHIFT,0x0CB3>>SN_UPSHIFT
+	.long 0x0A14>>SN_UPSHIFT,0x0800>>SN_UPSHIFT,0x0659>>SN_UPSHIFT,0x050A>>SN_UPSHIFT
+	.long 0x0400>>SN_UPSHIFT,0x032C>>SN_UPSHIFT,0x0285>>SN_UPSHIFT,0x0000>>SN_UPSHIFT
+;@----------------------------------------------------------------------------
+#endif
 	.end
 #endif // #ifdef __arm__
