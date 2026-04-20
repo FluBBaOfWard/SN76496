@@ -1,9 +1,9 @@
 ;@
 ;@  SN76496.s
-;@  SN76496/SMS sound chip emulator for arm32.
+;@  SN76496/SMS/GG/MD/NGP sound chip emulator for arm32.
 ;@
-;@  Created by Fredrik Ahlström on 2009-08-25.
-;@  Copyright © 2009-2024 Fredrik Ahlström. All rights reserved.
+;@  Created by Fredrik Ahlström on 2005-07-11.
+;@  Copyright © 2005-2026 Fredrik Ahlström. All rights reserved.
 ;@
 #ifdef __arm__
 
@@ -15,14 +15,15 @@
 	.global sn76496GetStateSize
 	.global sn76496Mixer
 	.global sn76496W
+	.global sn76496LW
 	.global sn76496GGW
-								;@ These values are for the SMS/GG/MD vdp/sound chip.
-	.equ PFEED_SMS,	0x8000		;@ Periodic Noise Feedback
-	.equ WFEED_SMS,	0x9000		;@ White Noise Feedback
-
 								;@ These values are for the SN76489/SN76496 sound chip.
 	.equ PFEED_SN,	0x4000		;@ Periodic Noise Feedback
 	.equ WFEED_SN,	0x6000		;@ White Noise Feedback
+
+								;@ These values are for the SMS/GG/MD vdp/sound chip.
+	.equ PFEED_SMS,	0x8000		;@ Periodic Noise Feedback
+	.equ WFEED_SMS,	0x9000		;@ White Noise Feedback
 
 								;@ These values are for the NCR 8496 sound chip.
 	.equ PFEED_NCR,	0x4000		;@ Periodic Noise Feedback
@@ -106,8 +107,8 @@ sn76496Reset:				;@ In r0=chiptype SMS/SN76496, r1=sn76496ptr
 	.type   sn76496Reset STT_FUNC
 ;@----------------------------------------------------------------------------
 	cmp r0,#1
-	ldr r3,=(WFEED_SMS<<16)+PFEED_SMS
-	ldreq r3,=(WFEED_SN<<16)+PFEED_SN
+	ldr r3,=(WFEED_SN<<16)+PFEED_SN
+	ldreq r3,=(WFEED_SMS<<16)+PFEED_SMS
 	ldrhi r3,=(WFEED_NCR<<16)+PFEED_NCR
 
 	mov r0,#0
@@ -156,7 +157,7 @@ sn76496LoadState:			;@ In r0=sn76496ptr, r1=source. Out r0=state size.
 sn76496GetStateSize:		;@ Out r0=state size.
 	.type   sn76496GetStateSize STT_FUNC
 ;@----------------------------------------------------------------------------
-	mov r0,#snStateEnd-snStateStart
+	mov r0,#snStateEnd
 	bx lr
 
 ;@----------------------------------------------------------------------------
@@ -226,7 +227,7 @@ calculateVolumes:			;@ In r2=sn76496ptr
 ;@----------------------------------------------------------------------------
 	stmfd sp!,{r0,r1,r3-r6}
 
-	add r1,r2,#ch0Vol
+	add r1,r2,#snPadding0
 	ldmia r1,{r3-r6}
 	adr r1,attenuation1_4
 	ldr r3,[r1,r3,lsr#22]

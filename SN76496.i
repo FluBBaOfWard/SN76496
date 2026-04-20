@@ -1,9 +1,9 @@
 ;@
 ;@  SN76496.i
-;@  SN76496/SMS sound chip emulator for arm32.
+;@  SN76496/SMS/GG/MD/NGP sound chip emulator for arm32.
 ;@
-;@  Created by Fredrik Ahlström on 2009-08-25.
-;@  Copyright © 2009-2026 Fredrik Ahlström. All rights reserved.
+;@  Created by Fredrik Ahlström on 2005-07-11.
+;@  Copyright © 2005-2026 Fredrik Ahlström. All rights reserved.
 ;@
 #if !__ASSEMBLER__
 	#error This header file is only for use in assembly files!
@@ -31,20 +31,25 @@ ch3Reg:			.byte 0
 ggStereo:		.byte 0
 snPadding:		.skip 1
 
-snPadding0:		.skip 3
+snPadding0:		.short 0
+ch0AttL:		.byte 0
 ch0Att:			.byte 0
-snPadding1:		.skip 3
+snPadding1:		.short 0
+ch1AttL:		.byte 0
 ch1Att:			.byte 0
-snPadding2:		.skip 3
+ch2Reg:			.short 0
+ch2AttL:		.byte 0
 ch2Att:			.byte 0
-snPadding3:		.skip 3
+snPadding3:		.short 0
+ch3AttL:		.byte 0
 ch3Att:			.byte 0
 
 snLastReg:		.long 0
+snLastRegL:		.long 0
 
 snStateEnd:
 noiseType:		.long 0
-snPadding4:		.skip 2*4
+snPadding4:		.skip 1*4
 calculatedVolumes:	.space 16*2*2
 
 snSize:

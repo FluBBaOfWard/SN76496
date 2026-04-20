@@ -1,12 +1,15 @@
 # SN76496 V1.6.8
 
-SN76496/SN76489, SMS sound chip plus GG stereo extension for ARM32.
+SN76496/SN76489, SMS sound chip plus GG & NGP stereo extension for ARM32.
 
 ## How to use
 
 First alloc chip struct, call sn76496Reset with chip type & struct.
 Call sn76496Mixer with length, destination and chip struct.
 Produces signed 16bit interleaved stereo.
+You define SN_UPSHIFT to a number, this is how many times the internal
+sampling is doubled. You can add "-DSN_UPSHIFT=2" to the "make" file to
+make the internal clock speed 4 times higher (this is the default).
 
 ## Projects that use this code
 
