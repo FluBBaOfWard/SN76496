@@ -1,6 +1,6 @@
 //
 //  SN76496.h
-//  SN76496/SMS sound chip emulator for arm32.
+//  SN76496/SMS/GG/MD/NGP sound chip emulator for arm32.
 //
 //  Created by Fredrik Ahlström on 2005-07-11.
 //  Copyright © 2005-2026 Fredrik Ahlström. All rights reserved.

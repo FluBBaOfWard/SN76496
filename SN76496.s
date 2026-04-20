@@ -197,7 +197,7 @@ frqLoop:
 	.align 2
 #ifndef SN_NGP
 ;@----------------------------------------------------------------------------
-sn76496W:					;@ In r0 = value, r1 = sn76496ptr
+sn76496W:					;@ In r0=value, r1=sn76496ptr
 	.type   sn76496W STT_FUNC
 ;@----------------------------------------------------------------------------
 	movs r12,r0,lsl#25
@@ -312,7 +312,7 @@ attenuation:				;@ each step * 0.79370053 (-1dB?)
 ;@----------------------------------------------------------------------------
 #else
 ;@----------------------------------------------------------------------------
-sn76496W:					;@ In r0 = value, r1 = struct-pointer, right ch.
+sn76496W:					;@ In r0=value, r1=sn76496ptr, right ch.
 	.type   sn76496W STT_FUNC
 ;@----------------------------------------------------------------------------
 	movs r12,r0,lsl#25
@@ -337,9 +337,9 @@ setFreq:
 	tst r0,#0x80
 	andeq r0,r0,#0x3F
 	movne r0,r0,lsl#4
-	strbeq r0,[r2,#ch0Reg+1]
-	strbne r0,[r2,#ch0Reg]
-	ldrh r0,[r2,#ch0Reg]
+	strbeq r0,[r1,#ch2Reg+1]
+	strbne r0,[r1,#ch2Reg]
+	ldrh r0,[r1,#ch2Reg]
 	mov r0,r0,lsr#3
 	strh r0,[r1,#ch1Reg]
 
@@ -366,7 +366,7 @@ setNoiseFreq:
 	strh r12,[r1,#ch3Frq]
 	bx lr
 ;@----------------------------------------------------------------------------
-sn76496LW:					;@ In r0 = value, r1 = struct-pointer, left ch.
+sn76496LW:					;@ In r0=value, r1=sn76496ptr, left ch.
 	.type   sn76496LW STT_FUNC
 ;@----------------------------------------------------------------------------
 	movs r12,r0,lsl#25
@@ -410,25 +410,27 @@ calculateVolumes:			;@ In r2 = snptr
 	stmfd sp!,{r0,r1,r3-r6,lr}
 
 	add r1,r2,#ch0Reg
-	ldmia r1,{r3-r6,r12,lr}
+	ldmia r1,{r5-r6,r12,lr}
 	adr r1,attenuation
-	ldr r3,[r1,r3,lsr#22]
-	ldr r4,[r1,r4,lsr#22]
-	ldr r5,[r1,r5,lsr#22]
-	ldr r6,[r1,r6,lsr#22]
 
-	ldr r0,[r1,r12,lsr#22]
+	ldr r3,[r1,r5,lsr#22]
+	mov r5,r5,lsl#8
+	ldr r0,[r1,r5,lsr#22]
 	orr r3,r3,r0,lsl#16
 
-	ldr r0,[r1,lr,lsr#22]
+	ldr r4,[r1,r6,lsr#22]
+	mov r6,r6,lsl#8
+	ldr r0,[r1,r6,lsr#22]
 	orr r4,r4,r0,lsl#16
 
-	ldrb r0,[r2,#ch2AttL]
-	ldr r0,[r1,r0,lsl#2]
+	ldr r5,[r1,r12,lsr#22]
+	mov r12,r12,lsl#8
+	ldr r0,[r1,r12,lsr#22]
 	orr r5,r5,r0,lsl#16
 
-	ldrb r0,[r2,#ch3AttL]
-	ldr r0,[r1,r0,lsl#2]
+	ldr r6,[r1,lr,lsr#22]
+	mov lr,lr,lsl#8
+	ldr r0,[r1,lr,lsr#22]
 	orr r6,r6,r0,lsl#16
 
 	add r12,r2,#calculatedVolumes
@@ -445,6 +447,7 @@ volLoop:
 	str r0,[r12,r1,lsl#2]
 	subs r1,r1,#1
 	bne volLoop
+
 	strb r1,[r2,#snAttChg]
 	ldmfd sp!,{r0,r1,r3-r6,pc}
 ;@----------------------------------------------------------------------------
