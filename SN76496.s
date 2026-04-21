@@ -22,17 +22,17 @@
 	.global sn76496W
 	.global sn76496LW
 	.global sn76496GGW
-									;@ These values are for the SN76489/SN76496 sound chip.
-	.equ PFEED_SN,	0x4000			;@ Periodic Noise Feedback
-	.equ WFEED_SN,	0x6000			;@ White Noise Feedback
+								;@ These values are for the SN76489/SN76496 sound chip.
+	.equ PFEED_SN,	0x4000		;@ Periodic Noise Feedback
+	.equ WFEED_SN,	0x6000		;@ White Noise Feedback
 
-									;@ These values are for the SMS/GG/MD vdp/sound chip.
-	.equ PFEED_SMS,	0x8000			;@ Periodic Noise Feedback
-	.equ WFEED_SMS,	0x9000			;@ White Noise Feedback
+								;@ These values are for the SMS/GG/MD vdp/sound chip.
+	.equ PFEED_SMS,	0x8000		;@ Periodic Noise Feedback
+	.equ WFEED_SMS,	0x9000		;@ White Noise Feedback
 
-									;@ These values are for the NCR 8496 sound chip.
-	.equ PFEED_NCR,	0x4000			;@ Periodic Noise Feedback
-	.equ WFEED_NCR,	0x4400			;@ White Noise Feedback
+								;@ These values are for the NCR 8496 sound chip.
+	.equ PFEED_NCR,	0x4000		;@ Periodic Noise Feedback
+	.equ WFEED_NCR,	0x4400		;@ White Noise Feedback
 
 	.syntax unified
 	.arm
@@ -100,7 +100,7 @@ sn76496Init:				;@ In r0=sn76496ptr, r1=FREQTABLE
 	ldmfd sp!,{r0,lr}
 	bx lr
 ;@----------------------------------------------------------------------------
-sn76496Reset:				;@ In r0=chiptype SMS/SN76496, r1=sn76496ptr
+sn76496Reset:				;@ In r0=chiptype SN76496/SMS, r1=sn76496ptr
 	.type   sn76496Reset STT_FUNC
 ;@----------------------------------------------------------------------------
 	cmp r0,#1
@@ -177,7 +177,7 @@ frequencyCalculate:			;@ In r0=sn76496ptr, r1=FREQTABLE
 	stmfd sp!,{r4-r6,lr}
 	str r1,[r0,#freqTablePtr]
 	mov r5,r1					;@ Destination
-	ldr r6,[r0,#freqConv]	;@ (sn76496/gba)*4096
+	ldr r6,[r0,#freqConv]		;@ (sn76496/gba)*4096
 	mov r4,#2048
 frqLoop:
 	mov r0,r6
@@ -203,45 +203,46 @@ sn76496W:					;@ In r0=value, r1=sn76496ptr
 	movs r12,r0,lsl#25
 	ldrcc r12,[r1,#snLastReg]
 	strcs r12,[r1,#snLastReg]
-	movs r12,r12,lsr#30
-	add r2,r1,r12,lsl#2
+	movs r2,r12,lsr#30
 	bcc setFreq
 doVolume:
-	and r0,r0,#0x0F
+	add r2,r1,r2,lsl#2
 	ldrb r12,[r2,#ch0Att]
+	and r0,r0,#0x0F
 	eors r12,r12,r0
 	strbne r0,[r2,#ch0Att]
 	strbne r12,[r1,#snAttChg]
 	bx lr
 
 setFreq:
-	cmp r12,#2					;@ Check channel 2/3
+	cmp r2,#2					;@ Check channel 2/3
 	bhi setNoiseFreq			;@ Noise channel
-	ldrbeq r12,[r1,#ch3Reg]		;@ Cache Ch3 reg
-	tst r0,#0x80
+	add r2,r1,r2,lsl#2
+	tst r0,#0x80				;@ Should not change carry.
+	ldrbne r0,[r2,#ch0Reg+1]
 	andeq r0,r0,#0x3F
-	movne r0,r0,lsl#4
-	strbeq r0,[r2,#ch0Reg+1]
-	strbne r0,[r2,#ch0Reg]
-	ldrh r0,[r2,#ch0Reg]
+	orr r0,r0,r12,lsl#3
+	mov r0,r0,ror#24
+	ldrbcs r12,[r1,#ch3Reg]
+	strh r0,[r2,#ch0Reg]
 	mov r0,r0,lsr#3
 
-	ldr r1,[r1,#freqTablePtr]
-	ldrh r0,[r1,r0]
+	cmp r12,#3
+	ldr r12,[r1,#freqTablePtr]
+	ldrh r0,[r12,r0]
 	strh r0,[r2,#ch0Frq]
 
-	cmp r12,#3
-	strheq r0,[r2,#ch0Frq+4]	;@ This means Ch3Frq
+	strheq r0,[r1,#ch3Frq]
 	bx lr
 
 setNoiseFreq:
 	and r2,r0,#3
 	strb r2,[r1,#ch3Reg]
+	ldr r12,[r1,#noiseType]
 	tst r0,#4
-	ldr r0,[r1,#noiseType]
-	strh r0,[r1,#rng]
-	movne r0,r0,lsr#16			;@ White noise
-	strh r0,[r1,#noiseFB]
+	strh r12,[r1,#rng]
+	movne r12,r12,lsr#16		;@ White noise
+	strh r12,[r1,#noiseFB]
 	cmp r2,#3
 	ldrne r0,[r1,#freqConv]
 	ldrheq r0,[r1,#ch2Frq]
@@ -318,52 +319,51 @@ sn76496W:					;@ In r0=value, r1=sn76496ptr, right ch.
 	movs r12,r0,lsl#25
 	ldrcc r12,[r1,#snLastReg]
 	strcs r12,[r1,#snLastReg]
-	movs r12,r12,lsr#30
-	add r2,r1,r12,lsl#2
+	movs r2,r12,lsr#30
 	bcc setFreq
 doVolume:
-	and r0,r0,#0x0F
+	add r2,r1,r2,lsl#2
 	ldrb r12,[r2,#ch0Att]
+	and r0,r0,#0x0F
 	eors r12,r12,r0
 	strbne r0,[r2,#ch0Att]
 	strbne r12,[r1,#snAttChg]
 	bx lr
 
 setFreq:
-	cmp r12,#2
-	bhi setNoiseFreq
+	cmp r2,#2					;@ Check channel 2/3
+	bhi setNoiseFreq			;@ Noise channel
 	bxmi lr
-	ldrb r12,[r1,#ch3Reg]		;@ Cache Ch3 reg
 	tst r0,#0x80
+	ldrhne r0,[r1,#ch2Reg]
 	andeq r0,r0,#0x3F
-	movne r0,r0,lsl#4
-	strbeq r0,[r1,#ch2Reg+1]
-	strbne r0,[r1,#ch2Reg]
-	ldrh r0,[r1,#ch2Reg]
-	mov r0,r0,lsr#3
-	strh r0,[r1,#ch1Reg]
+	movne r0,r0,lsr#5
+	orr r0,r0,r12,lsl#3
+	mov r0,r0,ror#27
+	ldrb r12,[r1,#ch3Reg]
+	strh r0,[r1,#ch2Reg]
 
-	ldr r2,[r1,#freqTablePtr]
-	ldrh r0,[r2,r0]
 	cmp r12,#3
+	ldreq r2,[r1,#freqTablePtr]
+	ldrheq r0,[r2,r0]
 	strheq r0,[r1,#ch3Frq]
 	bx lr
 
 setNoiseFreq:
 	and r2,r0,#3
 	strb r2,[r1,#ch3Reg]
+	ldr r12,[r1,#noiseType]
 	tst r0,#4
-	ldr r0,[r1,#noiseType]
-	strh r0,[r1,#rng]
-	movne r0,r0,lsr#16			;@ White noise
-	strh r0,[r1,#noiseFB]
-	mov r12,#0x0400				;@ These values sound ok
-	mov r12,r12,lsl r2
+	strh r12,[r1,#rng]
+	movne r12,r12,lsr#16		;@ White noise
+	strh r12,[r1,#noiseFB]
 	cmp r2,#3
-	ldrheq r12,[r1,#ch1Reg]
-	ldreq r2,[r1,#freqTablePtr]
-	ldrheq r12,[r2,r12]
-	strh r12,[r1,#ch3Frq]
+	ldrheq r0,[r1,#ch2Reg]
+	movne r0,#0x0040			;@ These values sound ok
+	movne r0,r0,lsl r2
+	ldr r2,[r1,#freqTablePtr]
+	ldrh r0,[r2,r0]
+	strh r0,[r1,#ch3Frq]
 	bx lr
 ;@----------------------------------------------------------------------------
 sn76496LW:					;@ In r0=value, r1=sn76496ptr, left ch.
@@ -372,26 +372,26 @@ sn76496LW:					;@ In r0=value, r1=sn76496ptr, left ch.
 	movs r12,r0,lsl#25
 	ldrcc r12,[r1,#snLastRegL]
 	strcs r12,[r1,#snLastRegL]
-	movs r12,r12,lsr#30
-	add r2,r1,r12,lsl#2
+	movs r2,r12,lsr#30
+	add r2,r1,r2,lsl#2
 	bcc setFreqL
 doVolumeL:
-	and r0,r0,#0x0F
 	ldrb r12,[r2,#ch0AttL]
+	and r0,r0,#0x0F
 	eors r12,r12,r0
 	strbne r0,[r2,#ch0AttL]
 	strbne r12,[r1,#snAttChg]
 	bx lr
 
 setFreqL:
-	cmp r12,#3					;@ Noise channel
-	bxeq lr
+	cmn r12,#0x40000000			;@ Noise channel
+	bxcs lr
 	tst r0,#0x80
+	ldrbne r0,[r2,#ch0RegL+1]
 	andeq r0,r0,#0x3F
-	movne r0,r0,lsl#4
-	strbeq r0,[r2,#ch0RegL+1]
-	strbne r0,[r2,#ch0RegL]
-	ldrh r0,[r2,#ch0RegL]
+	orr r0,r0,r12,lsl#3
+	mov r0,r0,ror#24
+	strh r0,[r2,#ch0RegL]
 	mov r0,r0,lsr#3
 
 	ldr r12,[r1,#freqTablePtr]

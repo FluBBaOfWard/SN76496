@@ -4,7 +4,6 @@ SN76496/SN76489, SMS/GG/MD, NGP & NCR8496 sound chip emulator for ARM32.
 
 This is highly specialised for the GBA but can be tweaked
 quite easily to support other platforms as well.
-You can define SN_NGP to emulate the sound chip of the NeoGeo Pocket. 
 
 ## How to use
 
@@ -15,6 +14,8 @@ Finally call sn76496Init to set it up.
 
 Call sn76496Mixer with chip struct, length and destination.
 Produces 8bit signed stereo.
+
+You can define SN_NGP to emulate the sound chip of the NeoGeo Pocket. 
 
 ## Projects that use this code
 
