@@ -29,16 +29,16 @@
 	.equ PFEED_NCR,	0x4000		;@ Periodic Noise Feedback
 	.equ WFEED_NCR,	0x4400		;@ White Noise Feedback
 
+#define SN_ADDITION 0x00400000
 #if !defined(SN_UPSHIFT)
 	#define SN_UPSHIFT (2)
 #endif
-#define SN_ADDITION 0x00400000
 
 	.syntax unified
 	.arm
 
 #ifdef NDS
-	.section .itcm, "ax", %progbits		;@ For the NDS
+	.section .itcm, "ax", %progbits		;@ For the NDS ARM9
 #elif GBA
 	.section .iwram, "ax", %progbits	;@ For the GBA
 #else
@@ -51,7 +51,7 @@
 ;@ r2  = sn76496ptr.
 ;@ r3 -> r6 = pos+freq.
 ;@ r7  = Noise generator.
-;@ r8  = CurrentBits.
+;@ r8  = currentBits + offset to calculated volumes.
 ;@ r9  = Noise feedback.
 ;@ r12 = Scrap.
 ;@ lr  = Mixer reg.
@@ -68,19 +68,19 @@ mixLoop:
 	mov lr,#0x80000000
 innerMixLoop:
 	adds r3,r3,#SN_ADDITION
-	subcs r3,r3,r3,lsl#16
+	subcs r3,r3,r3,lsl#18
 	eorcs r8,r8,#0x04
 
 	adds r4,r4,#SN_ADDITION
-	subcs r4,r4,r4,lsl#16
+	subcs r4,r4,r4,lsl#18
 	eorcs r8,r8,#0x08
 
 	adds r5,r5,#SN_ADDITION
-	subcs r5,r5,r5,lsl#16
+	subcs r5,r5,r5,lsl#18
 	eorcs r8,r8,#0x10
 
 	adds r6,r6,#SN_ADDITION		;@ 0x00200000?
-	subcs r6,r6,r6,lsl#16
+	subcs r6,r6,r6,lsl#18
 	biccs r8,r8,#0x20
 	movscs r7,r7,lsr#1
 	eorcs r7,r7,r9
@@ -112,7 +112,7 @@ sn76496Reset:				;@ In r0=chiptype SMS/SN76496, r1=sn76496ptr
 	ldrhi r3,=(WFEED_NCR<<16)+PFEED_NCR
 
 	mov r0,#0
-	mov r2,#snSize/4			;@ 60/4=15
+	mov r2,#snStateEnd/4		;@ 60/4=15
 rLoop:
 	subs r2,r2,#1
 	strpl r0,[r1,r2,lsl#2]
@@ -131,7 +131,7 @@ rLoop:
 	bx lr
 
 ;@----------------------------------------------------------------------------
-sn76496SaveState:			;@ In r0=destination, r1=sn76496ptr. Out r0=state size.
+sn76496SaveState:			;@ In r0=dest, r1=sn76496ptr. Out r0=state size.
 	.type   sn76496SaveState STT_FUNC
 ;@----------------------------------------------------------------------------
 	mov r2,#snStateEnd
@@ -152,7 +152,6 @@ sn76496LoadState:			;@ In r0=sn76496ptr, r1=source. Out r0=state size.
 	ldmfd sp!,{r0,lr}
 	mov r1,#1
 	strb r1,[r0,#snAttChg]
-
 ;@----------------------------------------------------------------------------
 sn76496GetStateSize:		;@ Out r0=state size.
 	.type   sn76496GetStateSize STT_FUNC
@@ -168,49 +167,48 @@ sn76496W:					;@ In r0=value, r1=sn76496ptr
 	movs r12,r0,lsl#25
 	ldrcc r12,[r1,#snLastReg]
 	strcs r12,[r1,#snLastReg]
-	movs r12,r12,lsr#30
-	add r2,r1,r12,lsl#2
+	movs r2,r12,lsr#30
 	bcc setFreq
 doVolume:
-	and r0,r0,#0x0F
+	add r2,r1,r2,lsl#2
 	ldrb r12,[r2,#ch0Att]
+	and r0,r0,#0x0F
 	eors r12,r12,r0
 	strbne r0,[r2,#ch0Att]
 	strbne r12,[r1,#snAttChg]
 	bx lr
 
 setFreq:
-	cmp r12,#2					;@ Check channel 2/3
+	cmp r2,#2					;@ Check channel 2/3
 	bhi setNoiseFreq			;@ Noise channel
-	ldrbeq r12,[r1,#ch3Reg]		;@ Cache Ch3 reg
+	add r2,r1,r2,lsl#2
+	ldrbeq r1,[r1,#ch3Reg]		;@ Cache Ch3 reg
 	tst r0,#0x80
-	ldrh r1,[r2,#ch0Frq]
-	movne r0,r0,lsl#28
+	ldrbne r0,[r2,#ch0Frq+1]
 	andeq r0,r0,#0x3F
-	orrne r0,r0,r1,lsr#10
-	orreq r0,r0,r1,lsl#22
-	mov r0,r0,ror#22
-	cmp r0,#0x0180				;@ We set any value under 6 to 1 to fix aliasing.
-	movmi r0,#0x0040			;@ Value zero is same as 1 on SMS.
+	orr r0,r0,r12,lsl#3
+	mov r0,r0,ror#24
+	cmp r0,#0x0060				;@ We set any value under 6 to 1 to fix aliasing.
+	movmi r0,#0x0010			;@ Value zero is same as 1 on SMS.
 	strh r0,[r2,#ch0Frq]
 
-	cmp r12,#3
+	cmp r1,#3
 	strheq r0,[r2,#ch0Frq+4]	;@ This means Ch3Frq
 	bx lr
 
 setNoiseFreq:
 	and r2,r0,#3
 	strb r2,[r1,#ch3Reg]
+	ldr r12,[r1,#noiseType]
 	tst r0,#4
-	ldr r0,[r1,#noiseType]
-	strh r0,[r1,#rng]
-	movne r0,r0,lsr#16			;@ White noise
-	strh r0,[r1,#noiseFB]
+	strh r12,[r1,#rng]
+	movne r12,r12,lsr#16			;@ White noise
+	strh r12,[r1,#noiseFB]
 	cmp r2,#3
-	ldrheq r12,[r1,#ch2Frq]
-	movne r12,#0x0400			;@ These values sound ok
-	movne r12,r12,lsl r2
-	strh r12,[r1,#ch3Frq]
+	ldrheq r0,[r1,#ch2Frq]
+	movne r0,#0x0100			;@ These values sound ok
+	movne r0,r0,lsl r2
+	strh r0,[r1,#ch3Frq]
 	bx lr
 
 ;@----------------------------------------------------------------------------
@@ -283,31 +281,29 @@ sn76496W:					;@ In r0=value, r1=sn76496ptr, right ch.
 	movs r12,r0,lsl#25
 	ldrcc r12,[r1,#snLastReg]
 	strcs r12,[r1,#snLastReg]
-	movs r12,r12,lsr#30
-	add r2,r1,r12,lsl#2
+	movs r2,r12,lsr#30
 	bcc setFreq
 doVolume:
-	and r0,r0,#0x0F
+	add r2,r1,r2,lsl#2
 	ldrb r12,[r2,#ch0Att]
+	and r0,r0,#0x0F
 	eors r12,r12,r0
 	strbne r0,[r2,#ch0Att]
 	strbne r12,[r1,#snAttChg]
 	bx lr
 
 setFreq:
-	cmp r12,#2
-	bhi setNoiseFreq
-	bxmi lr
-	ldrb r12,[r1,#ch3Reg]		;@ Cache Ch3 reg
+	movs r12,r12,lsl#1
+	bxcc lr
+	bmi setNoiseFreq
 	tst r0,#0x80
-	ldrh r2,[r1,#ch2Reg]
-	movne r0,r0,lsl#28
+	ldrbne r0,[r1,#ch2Reg+1]
 	andeq r0,r0,#0x3F
-	orrne r0,r0,r2,lsr#10
-	orreq r0,r0,r2,lsl#22
-	mov r0,r0,ror#22
-	cmp r0,#0x0180				;@ We set any value under 6 to 1 to fix aliasing.
-	movmi r0,#0x0040			;@ Value zero is same as 1 on SMS.
+	orr r0,r0,r12,lsl#2
+	mov r0,r0,ror#24
+	cmp r0,#0x0060				;@ We set any value under 6 to 1 to fix aliasing.
+	movmi r0,#0x0010			;@ Value zero is same as 1 on SMS.
+	ldrb r12,[r1,#ch3Reg]
 	strh r0,[r1,#ch2Reg]
 
 	cmp r12,#3
@@ -317,16 +313,16 @@ setFreq:
 setNoiseFreq:
 	and r2,r0,#3
 	strb r2,[r1,#ch3Reg]
+	ldr r12,[r1,#noiseType]
 	tst r0,#4
-	ldr r0,[r1,#noiseType]
-	strh r0,[r1,#rng]
-	movne r0,r0,lsr#16			;@ White noise
-	strh r0,[r1,#noiseFB]
+	strh r12,[r1,#rng]
+	movne r12,r12,lsr#16			;@ White noise
+	strh r12,[r1,#noiseFB]
 	cmp r2,#3
-	ldrheq r12,[r1,#ch2Reg]
-	movne r12,#0x0400			;@ These values sound ok
-	movne r12,r12,lsl r2
-	strh r12,[r1,#ch3Frq]
+	ldrheq r0,[r1,#ch2Reg]
+	movne r0,#0x0100			;@ These values sound ok
+	movne r0,r0,lsl r2
+	strh r0,[r1,#ch3Frq]
 	bx lr
 
 ;@----------------------------------------------------------------------------
@@ -336,29 +332,27 @@ sn76496LW:					;@ In r0 = value, r1 = sn76496ptr, left ch.
 	movs r12,r0,lsl#25
 	ldrcc r12,[r1,#snLastRegL]
 	strcs r12,[r1,#snLastRegL]
-	movs r12,r12,lsr#30
-	add r2,r1,r12,lsl#2
+	movs r2,r12,lsr#30
+	add r2,r1,r2,lsl#2
 	bcc setFreqL
 doVolumeL:
-	and r0,r0,#0x0F
 	ldrb r12,[r2,#ch0AttL]
+	and r0,r0,#0x0F
 	eors r12,r12,r0
 	strbne r0,[r2,#ch0AttL]
 	strbne r12,[r1,#snAttChg]
 	bx lr
 
 setFreqL:
-	cmp r12,#3					;@ Noise channel
-	bxeq lr
+	cmn r12,#0x40000000			;@ Noise channel
+	bxcs lr
 	tst r0,#0x80
-	ldrh r1,[r2,#ch0Frq]
-	movne r0,r0,lsl#28
+	ldrbne r0,[r2,#ch0Frq+1]
 	andeq r0,r0,#0x3F
-	orrne r0,r0,r1,lsr#10
-	orreq r0,r0,r1,lsl#22
-	mov r0,r0,ror#22
-	cmp r0,#0x0180				;@ We set any value under 6 to 1 to fix aliasing.
-	movmi r0,#0x0040			;@ Value zero is same as 1 on SMS.
+	orr r0,r0,r12,lsl#3
+	mov r0,r0,ror#24
+	cmp r0,#0x0060				;@ We set any value under 6 to 1 to fix aliasing.
+	movmi r0,#0x0010			;@ Value zero is same as 1 on SMS.
 	strh r0,[r2,#ch0Frq]
 
 //	cmp r12,#2					;@ Ch2
