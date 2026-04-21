@@ -2,8 +2,8 @@
 //  SN76496.h
 //  SN76496/SN76489 sound chip emulator for arm32.
 //
-//  Created by Fredrik Ahlström on 2009-08-25.
-//  Copyright © 2009-2026 Fredrik Ahlström. All rights reserved.
+//  Created by Fredrik Ahlström on 2005-07-11.
+//  Copyright © 2005-2026 Fredrik Ahlström. All rights reserved.
 //
 #ifndef SN76496_HEADER
 #define SN76496_HEADER
@@ -53,7 +53,7 @@ typedef struct {
 
 /**
  * Reset/initialize SN76496 chip.
- * @param  chipType: selects version of chip, 0=SMS/GG VDP version, 1=SN76496, 2=NCR 8496.
+ * @param  chipType: selects version of chip, 0=SN76496, 1=SMS/GG VDP version, 2=NCR 8496.
  * @param  *chip: The SN76496 chip.
  */
 void sn76496Reset(int chiptype, SN76496 *chip);

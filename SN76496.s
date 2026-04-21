@@ -2,8 +2,8 @@
 ;@  SN76496.s
 ;@  SN76496/SN76489 sound chip emulator for arm32.
 ;@
-;@  Created by Fredrik Ahlström on 2009-08-25.
-;@  Copyright © 2009-2026 Fredrik Ahlström. All rights reserved.
+;@  Created by Fredrik Ahlström on 2005-07-11.
+;@  Copyright © 2005-2026 Fredrik Ahlström. All rights reserved.
 ;@
 #ifdef __arm__
 
@@ -15,13 +15,13 @@
 	.global sn76496GetStateSize
 	.global sn76496Mixer
 	.global sn76496W
-								;@ These values are for the SMS/GG/MD vdp/sound chip.
-	.equ PFEED_SMS,	0x8000		;@ Periodic Noise Feedback
-	.equ WFEED_SMS,	0x9000		;@ White Noise Feedback
-
 								;@ These values are for the SN76489/SN76496 sound chip.
 	.equ PFEED_SN,	0x4000		;@ Periodic Noise Feedback
 	.equ WFEED_SN,	0x6000		;@ White Noise Feedback
+
+								;@ These values are for the SMS/GG/MD vdp/sound chip.
+	.equ PFEED_SMS,	0x8000		;@ Periodic Noise Feedback
+	.equ WFEED_SMS,	0x9000		;@ White Noise Feedback
 
 								;@ These values are for the NCR 8496 sound chip.
 	.equ PFEED_NCR,	0x4000		;@ Periodic Noise Feedback
@@ -48,21 +48,21 @@
 #endif
 	.align 2
 ;@----------------------------------------------------------------------------
-;@ r0 = Mix length.
-;@ r1 = Mixerbuffer.
-;@ r2 = sn76496ptr.
+;@ r0  = Mix length.
+;@ r1  = Mixerbuffer.
+;@ r2  = sn76496ptr.
 ;@ r3 -> r6 = pos+freq.
-;@ r7 = Noise generator.
-;@ r8 = currentBits + offset to calculated volumes.
-;@ r9 = Noise feedback.
-;@ r12 = scrap
-;@ lr = Mixer reg.
+;@ r7  = Noise generator.
+;@ r8  = currentBits + offset to calculated volumes.
+;@ r9  = Noise feedback.
+;@ r12 = Scrap.
+;@ lr  = Mixer reg.
 ;@----------------------------------------------------------------------------
 sn76496Mixer:				;@ In r0=len, r1=dest, r2=sn76496ptr
 	.type   sn76496Mixer STT_FUNC
 ;@----------------------------------------------------------------------------
 	stmfd sp!,{r4-r9,lr}
-	ldmia r2,{r3-r9,lr}		;@ Load freq/addr0-3, currentBits, rng, noisefb, attChg
+	ldmia r2,{r3-r9,lr}			;@ Load freq/addr0-3, rng, currentBits, noisefb, attChg
 	tst lr,#0xff
 	blne calculateVolumes
 ;@----------------------------------------------------------------------------
@@ -72,19 +72,19 @@ mixLoop:
 innerMixLoop:
 #endif
 	adds r3,r3,#SN_ADDITION
-	subcs r3,r3,r3,lsl#16
+	subcs r3,r3,r3,lsl#18
 	eorcs r8,r8,#0x02
 
 	adds r4,r4,#SN_ADDITION
-	subcs r4,r4,r4,lsl#16
+	subcs r4,r4,r4,lsl#18
 	eorcs r8,r8,#0x04
 
 	adds r5,r5,#SN_ADDITION
-	subcs r5,r5,r5,lsl#16
+	subcs r5,r5,r5,lsl#18
 	eorcs r8,r8,#0x08
 
 	adds r6,r6,#SN_ADDITION		;@ 0x00200000?
-	subcs r6,r6,r6,lsl#16
+	subcs r6,r6,r6,lsl#18
 	biccs r8,r8,#0x10
 	movscs r7,r7,lsr#1
 	eorcs r7,r7,r9
@@ -102,7 +102,7 @@ innerMixLoop:
 	strhpl lr,[r1],#2
 	bhi mixLoop
 
-	stmia r2,{r3-r8}			;@ Writeback freq,addr,currentBits,rng
+	stmia r2,{r3-r8}			;@ Writeback freq,addr,rng,currentBits
 	ldmfd sp!,{r4-r9,lr}
 	bx lr
 ;@----------------------------------------------------------------------------
@@ -110,17 +110,16 @@ innerMixLoop:
 	.section .text
 	.align 2
 ;@----------------------------------------------------------------------------
-sn76496Reset:				;@ r0=chiptype SMS/SN76496, r1=sn76496ptr
+sn76496Reset:				;@ In r0=chiptype SMS/SN76496, r1=sn76496ptr
 	.type   sn76496Reset STT_FUNC
 ;@----------------------------------------------------------------------------
-
 	cmp r0,#1
-	ldr r3,=(WFEED_SMS<<16)+PFEED_SMS
-	ldreq r3,=(WFEED_SN<<16)+PFEED_SN
+	ldr r3,=(WFEED_SN<<16)+PFEED_SN
+	ldreq r3,=(WFEED_SMS<<16)+PFEED_SMS
 	ldrhi r3,=(WFEED_NCR<<16)+PFEED_NCR
 
 	mov r0,#0
-	mov r2,#snStateEnd/4			;@ 60/4=15
+	mov r2,#snStateEnd/4		;@ 60/4=15
 rLoop:
 	subs r2,r2,#1
 	strpl r0,[r1,r2,lsl#2]
@@ -131,9 +130,9 @@ rLoop:
 	mov r3,r3,lsr#16
 	strh r3,[r1,#noiseFB]
 	mov r2,#calculatedVolumes
-	str r2,[r1,#currentBits]
+	str r2,[r1,#currentBits]	;@ Add offset to calculatedVolumes
 	mov r0,#ZERO_VOL
-	strh r0,[r1,r2]
+	strh r0,[r1,r2]				;@ Clear volume 0
 
 	bx lr
 
@@ -167,59 +166,58 @@ sn76496GetStateSize:		;@ Out r0=state size.
 	bx lr
 
 ;@----------------------------------------------------------------------------
-sn76496W:					;@ r0=value, r1=sn76496ptr
+sn76496W:					;@ In r0=value, r1=sn76496ptr
 	.type   sn76496W STT_FUNC
 ;@----------------------------------------------------------------------------
 	movs r12,r0,lsl#25
 	ldrcc r12,[r1,#snLastReg]
 	strcs r12,[r1,#snLastReg]
-	movs r12,r12,lsr#30
-	add r2,r1,r12,lsl#2
+	movs r2,r12,lsr#30
 	bcc setFreq
 doVolume:
-	and r0,r0,#0x0F
+	add r2,r1,r2,lsl#2
 	ldrb r12,[r2,#ch0Att]
+	and r0,r0,#0x0F
 	eors r12,r12,r0
 	strbne r0,[r2,#ch0Att]
 	strbne r12,[r1,#snAttChg]
 	bx lr
 
 setFreq:
-	cmp r12,#2					;@ Check channel 2/3
+	cmp r2,#2					;@ Check channel 2/3
 	bhi setNoiseFreq			;@ Noise channel
-	ldrbeq r12,[r1,#ch3Reg]		;@ Cache Ch3 reg
-	ldrh r1,[r2,#ch0Frq]
+	add r2,r1,r2,lsl#2
+	ldrbeq r1,[r1,#ch3Reg]		;@ Cache Ch3 reg
 	tst r0,#0x80
-	movne r0,r0,lsl#28
-	orrne r0,r0,r1,lsr#10
+	ldrbne r0,[r2,#ch0Frq+1]
 	andeq r0,r0,#0x3F
-	orreq r0,r0,r1,lsl#22
-	mov r0,r0,ror#22
-	cmp r0,#0x0180				;@ We set any value under 6 to 1 to fix aliasing.
-	movmi r0,#0x0040			;@ Value zero is same as 1 on SMS.
+	orr r0,r0,r12,lsl#3
+	mov r0,r0,ror#24
+	cmp r0,#0x0060				;@ We set any value under 6 to 1 to fix aliasing.
+	movmi r0,#0x0010			;@ Value zero is same as 1 on SMS.
 	strh r0,[r2,#ch0Frq]
 
-	cmp r12,#3
+	cmp r1,#3
 	strheq r0,[r2,#ch0Frq+4]	;@ This means Ch3Frq
 	bx lr
 
 setNoiseFreq:
 	and r2,r0,#3
 	strb r2,[r1,#ch3Reg]
+	ldr r12,[r1,#noiseType]
 	tst r0,#4
-	ldr r0,[r1,#noiseType]
-	strh r0,[r1,#rng]
-	movne r0,r0,lsr#16			;@ White noise
-	strh r0,[r1,#noiseFB]
+	strh r12,[r1,#rng]
+	movne r12,r12,lsr#16			;@ White noise
+	strh r12,[r1,#noiseFB]
 	cmp r2,#3
-	ldrheq r12,[r1,#ch2Frq]
-	movne r12,#0x0400			;@ These values sound ok
-	movne r12,r12,lsl r2
-	strh r12,[r1,#ch3Frq]
+	ldrheq r0,[r1,#ch2Frq]
+	movne r0,#0x0100			;@ These values sound ok
+	movne r0,r0,lsl r2
+	strh r0,[r1,#ch3Frq]
 	bx lr
 
 ;@----------------------------------------------------------------------------
-calculateVolumes:
+calculateVolumes:			;@ In r2=sn76496ptr
 ;@----------------------------------------------------------------------------
 	stmfd sp!,{r0,r1,r3-r6,lr}
 
@@ -245,11 +243,11 @@ volLoop:
 	strh r0,[r12,r1]
 	subs r1,r1,#2
 	bne volLoop
+
 	strb r1,[r2,#snAttChg]
 	ldmfd sp!,{r0,r1,r3-r6,pc}
-
 ;@----------------------------------------------------------------------------
-attenuation:				;@ each step * 0.79370053 (-2dB?)
+attenuation:				;@ each step * 0.79370053 (-1dB?)
 	.long 0xFFFF,0xCB30,0xA145,0x8000,0x6598,0x50A3,0x4000,0x32CC
 	.long 0x2851,0x2000,0x1966,0x1428,0x1000,0x0CB3,0x0A14,0x0000
 ;@----------------------------------------------------------------------------

@@ -2,7 +2,7 @@ SN76496 revision history
 -=-=-=-=-=-=-=-=-=-=-=-=-
 
 
-V1.6.8 - 2026-04-15 (FluBBa)
+V1.6.8 - 2026-04-22 (FluBBa)
 	Tiny optimization to register writes.
 	Tiny optimization to calculate volume.
 
@@ -46,5 +46,19 @@ V1.1.0 - 2015-03-07 (FluBBa)
 	Fixed selection of SMS/SG-1000 for the SN76496 sound chip.
 
 V1.0.0 - 2009-08-25 (FluBBa)
+	First version for NDS.
+
+V0.4.0 - 2008-03-27 (FluBBa)
+   Added correct noise generation for SG-1000 emulation.
+
+V0.3.0 - 2006-05-13 (FluBBa)
+	Fixed volume attenuation.
+
+V0.2.0 - 2005-09-30 (FluBBa)
+	Optimized sound mixer.
+
+V0.1.0 - 2005-07-30 (FluBBa)
 	First version.
 
+V0.0.0 - 2005-07-11 (FluBBa)
+	Started coding on GBA version for ARM SDT.
