@@ -1,6 +1,6 @@
 //
 //  SN76496.h
-//  SN76496/SN76489 sound chip emulator for arm32.
+//  SN76496/SMS/GG/MD/NGP sound chip emulator for arm32.
 //
 //  Created by Fredrik Ahlström on 2005-07-11.
 //  Copyright © 2005-2026 Fredrik Ahlström. All rights reserved.
@@ -28,26 +28,28 @@ typedef struct {
 
 	u8 attChg;
 	u8 ch3Reg;
-	u8 padding[2];
+	u8 ggStereo;
+	u8 padding[1];
 
-	s16 calculatedVolumes[16];
-
-	u16 ch0Volume;
-	u8 padding0[1];
+	u8 padding0[2];
+	u8 ch0AttL;
 	u8 ch0Att;
-	u16 ch1Volume;
-	u8 padding1[1];
+	u8 padding1[2];
+	u8 ch1AttL;
 	u8 ch1Att;
-	u16 ch2Volume;
-	u8 padding2[1];
+	u16 ch2Reg;
+	u8 ch2AttL;
 	u8 ch2Att;
-	u16 ch3Volume;
-	u8 padding3[1];
+	u8 padding3[2];
+	u8 ch3AttL;
 	u8 ch3Att;
 
 	u32 lastReg;
+	u32 lastRegL;
 
 	u32 noiseType;
+	u32 padding4[1];
+	s16 calculatedVolumes[16*2];
 } SN76496;
 
 /**
@@ -89,12 +91,25 @@ int sn76496GetStateSize(void);
 void sn76496Mixer(int count, s16 *dest, SN76496 *chip);
 
 /**
- * Write value to SN76496 chip
+ * Write value to SN76496 chip (NGP port#0).
  * @param  value: value to write.
  * @param  *chip: The SN76496 chip.
  */
 void sn76496W(u8 value, SN76496 *chip);
 
+/**
+ * Write value to NGP/SN76496 chip port#1.
+ * @param  value: value to write.
+ * @param  *chip: The SN76496 chip.
+ */
+void sn76496LW(u8 value, SN76496 *chip);
+
+/**
+ * Write stereo separation value to SN76496 chip in the GameGear
+ * @param  value: value to write.
+ * @param  *chip: The SN76496 chip.
+ */
+void sn76496GGW(u8 value, SN76496 *chip);
 
 #ifdef __cplusplus
 }
