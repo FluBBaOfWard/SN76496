@@ -50,7 +50,6 @@ typedef struct {
 	u32 noiseType;
 } SN76496;
 
-
 /**
  * Reset/initialize SN76496 chip.
  * @param  chipType: selects version of chip, 0=SN76496, 1=SMS/GG VDP version, 2=NCR 8496.
@@ -81,8 +80,8 @@ int sn76496LoadState(SN76496 *chip, const void *source);
 int sn76496GetStateSize(void);
 
 /**
- * Renders count amount of samples, clocks the chip the same amount.
- * Internal oversampling can be set by defining SN_UPSHIFT to a number.
+ * Runs the sound chip for count number of cycles shifted by "SN_UPSHIFT",
+ * the default is 2, so if actual chip would output 218kHz this mixer would render at ~55kHz.
  * @param  count: Number of samples to render.
  * @param  *dest: Pointer to buffer where sound is rendered.
  * @param  *chip: The SN76496 chip.
@@ -94,7 +93,7 @@ void sn76496Mixer(int count, s16 *dest, SN76496 *chip);
  * @param  value: value to write.
  * @param  *chip: The SN76496 chip.
  */
-void sn76496W(u8 val, SN76496 *chip);
+void sn76496W(u8 value, SN76496 *chip);
 
 
 #ifdef __cplusplus

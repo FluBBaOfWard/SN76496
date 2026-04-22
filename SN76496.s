@@ -110,7 +110,7 @@ innerMixLoop:
 	.section .text
 	.align 2
 ;@----------------------------------------------------------------------------
-sn76496Reset:				;@ In r0=chiptype SMS/SN76496, r1=sn76496ptr
+sn76496Reset:				;@ In r0=chiptype SN76496/SMS, r1=sn76496ptr
 	.type   sn76496Reset STT_FUNC
 ;@----------------------------------------------------------------------------
 	cmp r0,#1
@@ -187,18 +187,18 @@ setFreq:
 	cmp r2,#2					;@ Check channel 2/3
 	bhi setNoiseFreq			;@ Noise channel
 	add r2,r1,r2,lsl#2
-	ldrbeq r1,[r1,#ch3Reg]		;@ Cache Ch3 reg
-	tst r0,#0x80
+	tst r0,#0x80				;@ Should not change carry.
 	ldrbne r0,[r2,#ch0Frq+1]
 	andeq r0,r0,#0x3F
 	orr r0,r0,r12,lsl#3
 	mov r0,r0,ror#24
+	ldrbcs r12,[r1,#ch3Reg]
 	cmp r0,#0x0060				;@ We set any value under 6 to 1 to fix aliasing.
 	movmi r0,#0x0010			;@ Value zero is same as 1 on SMS.
 	strh r0,[r2,#ch0Frq]
 
-	cmp r1,#3
-	strheq r0,[r2,#ch0Frq+4]	;@ This means Ch3Frq
+	cmp r12,#3
+	strheq r0,[r1,#ch3Frq]
 	bx lr
 
 setNoiseFreq:
