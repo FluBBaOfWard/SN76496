@@ -1,6 +1,6 @@
-# SN76496 V1.6.7
+# SN76496 V1.6.8
 
-SN76496/SN76489, NCR8496 & SMS/GG/MD sound chip emulator for ARM32.
+SN76496/SN76489, SMS/MD & NCR8496 sound chip emulator for ARM32.
 
 This is highly specialised for the GBA but can probably be tweaked
 quite easily to support other platforms as well.

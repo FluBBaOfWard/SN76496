@@ -2,8 +2,8 @@
 //  SN76496.h
 //  SN76496/SMS sound chip emulator for arm32.
 //
-//  Created by Fredrik Ahlström on 2009-08-25.
-//  Copyright © 2009-2026 Fredrik Ahlström. All rights reserved.
+//  Created by Fredrik Ahlström on 2005-07-11.
+//  Copyright © 2005-2026 Fredrik Ahlström. All rights reserved.
 //
 #ifndef SN76496_HEADER
 #define SN76496_HEADER
@@ -51,7 +51,7 @@ void sn76496Init(SN76496 *chip, u16 *freqtableptr);
 /**
  * Reset SN76496 chip.
  * @param  *chip: The SN76496 chip.
- * @param  chipType: selects version of chip, 0=SMS/GG VDP version, 1=SN76496, 2=NCR 8496.
+ * @param  chipType: selects version of chip, 0=SN76496, 1=SMS/GG VDP version, 2=NCR 8496.
  */
 void sn76496Reset(SN76496 *chip, int chipType);
 

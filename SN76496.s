@@ -2,8 +2,8 @@
 ;@  SN76496.s
 ;@  SN76496/SMS sound chip emulator for arm32.
 ;@
-;@  Created by Fredrik Ahlström on 2009-08-25.
-;@  Copyright © 2009-2026 Fredrik Ahlström. All rights reserved.
+;@  Created by Fredrik Ahlström on 2005-07-11.
+;@  Copyright © 2005-2026 Fredrik Ahlström. All rights reserved.
 ;@
 #ifdef __arm__
 
@@ -18,13 +18,13 @@
 	.global sn76496SetFrequency
 	.global sn76496Mixer
 	.global sn76496W
-								;@ These values are for the SMS/GG/MD vdp/sound chip.
-.equ PFEED_SMS,	0x8000			;@ Periodic Noise Feedback
-.equ WFEED_SMS,	0x9000			;@ White Noise Feedback
-
 								;@ These values are for the SN76489/SN76496 sound chip.
 .equ PFEED_SN,	0x4000			;@ Periodic Noise Feedback
 .equ WFEED_SN,	0x6000			;@ White Noise Feedback
+
+								;@ These values are for the SMS/GG/MD vdp/sound chip.
+.equ PFEED_SMS,	0x8000			;@ Periodic Noise Feedback
+.equ WFEED_SMS,	0x9000			;@ White Noise Feedback
 
 								;@ These values are for the NCR 8496 sound chip.
 .equ PFEED_NCR,	0x4000			;@ Periodic Noise Feedback
@@ -93,11 +93,11 @@ sn76496Init:				;@ In r0=sn76496ptr, r1=FREQTABLE
 	bl frequencyCalculate
 	ldmfd sp!,{snptr,lr}
 ;@----------------------------------------------------------------------------
-sn76496Reset:				;@ In r0=sn76496ptr, r1=chiptype SMS/SN76496
+sn76496Reset:				;@ In r0=sn76496ptr, r1=chiptype SN76496/SMS
 ;@----------------------------------------------------------------------------
 	cmp r1,#1
-	ldr r3,=(WFEED_SMS<<16)+PFEED_SMS
-	ldreq r3,=(WFEED_SN<<16)+PFEED_SN
+	ldr r3,=(WFEED_SN<<16)+PFEED_SN
+	ldreq r3,=(WFEED_SMS<<16)+PFEED_SMS
 	ldrhi r3,=(WFEED_NCR<<16)+PFEED_NCR
 
 	mov r1,#0
@@ -182,52 +182,52 @@ frqLoop:
 	.section .ewram, "ax", %progbits
 	.align 2
 ;@----------------------------------------------------------------------------
-sn76496W:					;@ In r0 = value, r1 = sn76496ptr
+sn76496W:					;@ In r0=value, r1=sn76496ptr
 	.type   sn76496W STT_FUNC
 ;@----------------------------------------------------------------------------
 	movs r12,r0,lsl#25
 	ldrcc r12,[r1,#snLastReg]
 	strcs r12,[r1,#snLastReg]
-	movs r12,r12,lsr#30
+	movs r2,r12,lsr#30
 	bcc setFreq
 doVolume:
 	and r0,r0,#0x0F
-	adr r2,attenuation			;@ This might be possible to optimise.
-	add r2,r2,r0
-	ldrh r0,[r2,r0]
-	add r2,r1,r12,lsl#1
+	adr r12,attenuation			;@ This might be possible to optimise.
+	add r12,r12,r0
+	ldrh r0,[r12,r0]
+	add r2,r1,r2,lsl#1
 	strh r0,[r2,#ch0Volume]
 	bx lr
 
 setFreq:
-	cmp r12,#2					;@ Check channel 2/3
+	cmp r2,#2					;@ Check channel 2/3
 	bhi setNoiseFreq			;@ Noise channel
-	add r2,r1,r12,lsl#2
-	ldrbeq r12,[r1,#ch3Reg]		;@ cache Ch3 reg
-	tst r0,#0x80
+	add r2,r1,r2,lsl#2
+	tst r0,#0x80				;@ Should not change carry.
+	ldrbne r0,[r2,#ch0Reg+1]
 	andeq r0,r0,#0x3F
-	movne r0,r0,lsl#4
-	strbeq r0,[r2,#ch0Reg+1]
-	strbne r0,[r2,#ch0Reg]
-	ldrh r0,[r2,#ch0Reg]
+	orr r0,r0,r12,lsl#3
+	mov r0,r0,ror#24
+	ldrbcs r12,[r1,#ch3Reg]
+	strh r0,[r2,#ch0Reg]
 	mov r0,r0,lsr#3
 
-	ldr r1,[r1,#freqTablePtr]
-	ldrh r0,[r1,r0]
+	cmp r12,#3
+	ldr r12,[r1,#freqTablePtr]
+	ldrh r0,[r12,r0]
 	strh r0,[r2,#ch0Frq]
 
-	cmp r12,#3
-	strheq r0,[r2,#ch0Frq+4]	;@ This means Ch3Frq
+	strheq r0,[r1,#ch3Frq]
 	bx lr
 
 setNoiseFreq:
 	and r2,r0,#3
-	str r2,[r1,#ch3Reg]
+	strb r2,[r1,#ch3Reg]
+	ldr r12,[r1,#noiseType]
 	tst r0,#4
-	ldr r0,[r1,#noiseType]
-	strh r0,[r1,#rng]
-	movne r0,r0,lsr#16			;@ White noise
-	strh r0,[r1,#noiseFB]
+	strh r12,[r1,#rng]
+	movne r12,r12,lsr#16		;@ White noise
+	strh r12,[r1,#noiseFB]
 	cmp r2,#3
 	ldrne r0,[r1,#freqConv]
 	ldrheq r0,[r1,#ch2Frq]
